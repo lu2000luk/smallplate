@@ -3,6 +3,7 @@ import pkg from "./package.json";
 import { Database } from "bun:sqlite";
 import { sql_init } from "./sql/init";
 import { mkdir } from "node:fs/promises";
+import { authRouter } from "./accounts";
 
 await mkdir("data", { recursive: true });
 export const db = new Database("data/plate.db", { create: true });
@@ -34,6 +35,7 @@ const server = Bun.serve({
     }
 
     if (url.pathname.startsWith("/auth")) {
+      return authRouter(req, url);
     }
 
     return new Response("[404] Not Found", { status: 404 });
