@@ -1,5 +1,6 @@
 import {
   createUser,
+  createUserAuthKey,
   getClientIp,
   getUserByEmail,
   hashPassword,
@@ -13,13 +14,16 @@ import {
 } from "./utils";
 import { log, warn } from "./log";
 
-const REGISTER_WINDOW_MS = Number(process.env.REGISTER_WINDOW_MS) || 15 * 60 * 1000;
-const REGISTER_MAX_ATTEMPTS_PER_IP = Number(process.env.REGISTER_MAX_ATTEMPTS_PER_IP) || 10;
+const REGISTER_WINDOW_MS =
+  Number(process.env.REGISTER_WINDOW_MS) || 15 * 60 * 1000;
+const REGISTER_MAX_ATTEMPTS_PER_IP =
+  Number(process.env.REGISTER_MAX_ATTEMPTS_PER_IP) || 10;
 
 const LOGIN_WINDOW_MS = Number(process.env.LOGIN_WINDOW_MS) || 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS_PER_IP = Number(process.env.LOGIN_MAX_ATTEMPTS_PER_IP) || 15;
-const LOGIN_MAX_ATTEMPTS_PER_EMAIL = Number(process.env.LOGIN_MAX_ATTEMPTS_PER_EMAIL) || 10;
-
+const LOGIN_MAX_ATTEMPTS_PER_IP =
+  Number(process.env.LOGIN_MAX_ATTEMPTS_PER_IP) || 15;
+const LOGIN_MAX_ATTEMPTS_PER_EMAIL =
+  Number(process.env.LOGIN_MAX_ATTEMPTS_PER_EMAIL) || 10;
 
 type RateLimitEntry = {
   count: number;
@@ -288,13 +292,35 @@ async function login(req: Request): Promise<Response> {
   clearRateLimit(loginRateLimitByEmail, email);
   clearRateLimit(loginRateLimitByIp, ip);
 
+  let authKey: string;
+  try {
+    authKey = createUserAuthKey(user.id);
+  } catch (error) {
+    warn("Failed to create auth key for user.", error);
+    return jsonResponse(
+      {
+        success: false,
+        message: "Login succeeded but token creation failed.",
+      },
+      500,
+    );
+  }
+
   log("Logged in user", email);
 
-  return jsonResponse({
-    success: true,
-    message: "Login successful.",
-    user: sanitizeUser(user),
-  });
+  return jsonResponse(
+    {
+      success: true,
+      message: "Login successful.",
+      user: sanitizeUser(user),
+      authKey,
+    },
+    200,
+    {
+      "Set-Token": authKey,
+      Authorization: `Bearer ${authKey}`,
+    },
+  );
 }
 
 export function authRouter(
