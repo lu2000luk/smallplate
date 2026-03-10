@@ -32,7 +32,7 @@ const AUTH_HEADER_NAMES = ["authorization", "x-auth-key"];
 export function jsonResponse(
   body: JsonObject,
   status = 200,
-  headers: HeadersInit = {},
+  headers = {},
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
