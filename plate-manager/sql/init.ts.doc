@@ -1,0 +1,10 @@
+plate entries:
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    servers TEXT,
+    data TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+servers text: { service_name: server_id }
+data: { enabled_services: [service_name] }

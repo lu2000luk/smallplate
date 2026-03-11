@@ -30,10 +30,11 @@ log("Database initialized successfully.");
 
 log("Serving web server...");
 
-type ServerTypes = "db" | "kv";
+export type ServerTypes = "db" | "kv";
 export type ServerWSData = {
   type: ServerTypes;
   latency: number;
+  id: string;
 };
 export type ConnectedServer = {
   type: ServerTypes;
@@ -64,6 +65,7 @@ const server = Bun.serve({
 
     if (url.pathname.startsWith("/__service")) {
       const type = url.searchParams.get("t") || "";
+      const id = url.searchParams.get("id") || "";
       const validTypes = ["db", "kv"];
 
       if (!validTypes.includes(type)) {
@@ -80,11 +82,16 @@ const server = Bun.serve({
         return new Response("Invalid service key", { status: 403 });
       }
 
+      if (!id) {
+        return new Response("Missing service id", { status: 400 });
+      }
+
       if (
         server.upgrade(req, {
           data: {
             type: type as ServerTypes,
             latency: 100,
+            id,
           },
         })
       ) {
