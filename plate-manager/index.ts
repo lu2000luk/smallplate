@@ -1,4 +1,5 @@
 import { log } from "./log";
+import { handleServerDisconnect, handleServerMessage } from "./plates";
 import pkg from "./package.json";
 import { Database } from "bun:sqlite";
 import { sql_init } from "./sql/init";
@@ -105,9 +106,14 @@ const server = Bun.serve({
   websocket: {
     data: {} as ServerWSData,
     open(ws) {
-      const { type } = ws.data;
+      const { type, id } = ws.data;
       ws.subscribe(type);
-      log("New server connected:", type);
+      connectedServers[id] = {
+        type,
+        socket: ws,
+        latency: ws.data.latency,
+      };
+      log("New server connected:", type, id);
 
       startPingLoop(ws);
     },
@@ -132,20 +138,24 @@ const server = Bun.serve({
         (parsedMessage.type === "ping" || parsedMessage.type === "pong")
       ) {
         handlePingMessage(ws, parsedMessage as PingPacket);
+        connectedServers[ws.data.id] = {
+          type: ws.data.type,
+          socket: ws,
+          latency: ws.data.latency,
+        };
+        return;
       }
+
+      handleServerMessage(ws.data.id, parsedMessage);
     },
     close(ws, code, reason) {
       stopPingLoop(ws);
-      const { type } = ws.data;
-      log("Server disconnected:", type, "Code:", code, "Reason:", reason);
+      const { type, id } = ws.data;
+      log("Server disconnected:", type, id, "Code:", code, "Reason:", reason);
 
-      for (const [id, server] of Object.entries(connectedServers)) {
-        if (server.socket === ws) {
-          delete connectedServers[id];
-          log("Removed server from connected servers:", id);
-          break;
-        }
-      }
+      delete connectedServers[id];
+      handleServerDisconnect(id);
+      log("Removed server from connected servers:", id);
     },
   },
 });

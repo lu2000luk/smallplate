@@ -17,7 +17,7 @@ export type PlateApiKeyRecord = {
 };
 
 export type PlateDataObject = Record<string, unknown>;
-export type PlateServersObject = string[];
+export type PlateServersObject = Partial<Record<"db" | "kv", string>>;
 
 function safeParseJson<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
@@ -98,8 +98,8 @@ export function createPlate(userId: number, name: string): PlateRecord {
     ): { lastInsertRowid: number | bigint };
   };
 
-  const servers = JSON.stringify([]);
-  const data = JSON.stringify({});
+  const servers = JSON.stringify({});
+  const data = JSON.stringify({ enabled_services: [] });
   const result = statement.run(userId, name, servers, data);
 
   return {
@@ -165,10 +165,20 @@ export function getPlateServers(plateId: number): PlateServersObject | null {
   const row = statement.get(plateId);
   if (!row) return null;
 
-  const parsed = safeParseJson<unknown>(row.servers, []);
-  if (!Array.isArray(parsed)) return [];
+  const parsed = safeParseJson<unknown>(row.servers, {});
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return {};
+  }
 
-  return parsed.filter((value): value is string => typeof value === "string");
+  const servers: PlateServersObject = {};
+
+  for (const [key, value] of Object.entries(parsed)) {
+    if ((key === "db" || key === "kv") && typeof value === "string") {
+      servers[key] = value;
+    }
+  }
+
+  return servers;
 }
 
 export function setPlateServers(
@@ -179,7 +189,7 @@ export function setPlateServers(
     run(servers: string, plateId: number): { changes: number };
   };
 
-  const result = statement.run(JSON.stringify(servers ?? []), plateId);
+  const result = statement.run(JSON.stringify(servers ?? {}), plateId);
   return result.changes > 0;
 }
 
@@ -208,23 +218,37 @@ export function listConnectedServersForPlate(plateId: number): Array<{
   type: "db" | "kv";
   latency: number;
 }> {
-  const serverIds = getPlateServers(plateId) ?? [];
+  const serverMap = getPlateServers(plateId) ?? {};
   const connectedPlateServers: Array<{
     id: string;
     type: "db" | "kv";
     latency: number;
   }> = [];
 
-  for (const serverId of serverIds) {
+  for (const [type, serverId] of Object.entries(serverMap)) {
+    if ((type !== "db" && type !== "kv") || typeof serverId !== "string") {
+      continue;
+    }
+
     const server = connectedServers[serverId];
     if (!server) continue;
 
     connectedPlateServers.push({
       id: serverId,
-      type: server.type,
+      type,
       latency: server.latency,
     });
   }
 
   return connectedPlateServers;
+}
+
+export function listAllPlates(): PlateRecord[] {
+  const statement = db.query(
+    "SELECT id, user_id, name, servers, data FROM plates ORDER BY id DESC",
+  ) as {
+    all(): PlateRecord[];
+  };
+
+  return statement.all();
 }
