@@ -22,12 +22,18 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
-const EMAIL_MAX_LENGTH = 254;
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_MAX_LENGTH = 72;
-const BCRYPT_COST = 12;
-const AUTH_KEY_LENGTH = 64;
-const AUTH_HEADER_NAMES = ["authorization", "x-auth-key"];
+const EMAIL_MAX_LENGTH = parseInt(process.env.EMAIL_MAX_LENGTH ?? "254", 10);
+const PASSWORD_MIN_LENGTH = parseInt(
+  process.env.PASSWORD_MIN_LENGTH ?? "8",
+  10,
+);
+const PASSWORD_MAX_LENGTH = parseInt(
+  process.env.PASSWORD_MAX_LENGTH ?? "72",
+  10,
+);
+const BCRYPT_COST = parseInt(process.env.BCRYPT_COST ?? "12", 10);
+const AUTH_KEY_LENGTH = parseInt(process.env.AUTH_KEY_LENGTH ?? "64", 10);
+const AUTH_HEADER_NAMES = ["authorization", "x-auth"];
 
 export function jsonResponse(
   body: JsonObject,
