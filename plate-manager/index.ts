@@ -16,6 +16,7 @@ type PingPacket = {
   type: "ping" | "pong";
 };
 import type { ServerWebSocket } from "bun";
+import { stream_lyrics } from "./martellare";
 
 await mkdir("data", { recursive: true });
 export const db = new Database("data/plate.db", { create: true });
@@ -53,7 +54,13 @@ const server = Bun.serve({
       const timestamp = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}.${String(now.getMilliseconds()).padStart(3, "0")}`;
 
       return new Response(
-        "Plate Manager v" + pkg.version + " (" + timestamp + ")",
+        "Plate Manager v" +
+          pkg.version +
+          " (" +
+          timestamp +
+          ")\n" +
+          Object.keys(connectedServers).length +
+          " servers",
         {
           status: 200,
         },
@@ -99,6 +106,10 @@ const server = Bun.serve({
         return;
       }
       return new Response("Upgrade failed", { status: 500 });
+    }
+
+    if (url.pathname.startsWith("/martellare")) {
+      return stream_lyrics();
     }
 
     return new Response("[404] Not Found", { status: 404 });
@@ -158,6 +169,7 @@ const server = Bun.serve({
       log("Removed server from connected servers:", id);
     },
   },
+  idleTimeout: 60,
 });
 
 log("Server is running at http://localhost:" + server.port);

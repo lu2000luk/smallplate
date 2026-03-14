@@ -1,4 +1,4 @@
-import { db } from ".";
+import { db, type ServerTypes } from ".";
 import { connectedServers } from "./index";
 
 export type PlateRecord = {
@@ -17,7 +17,7 @@ export type PlateApiKeyRecord = {
 };
 
 export type PlateDataObject = Record<string, unknown>;
-export type PlateServersObject = Partial<Record<"db" | "kv", string>>;
+export type PlateServersObject = Partial<Record<ServerTypes, string>>;
 
 function safeParseJson<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;

@@ -5,8 +5,8 @@ function getTimestampAndFunctionName(): string {
   if (stack) {
     const lines = stack.split("\n");
     if (true) {
-      // @ts-ignore
-      const callerLine = lines[3].trim().split("\\").at(-1) || undefined;
+      const callerLine = // @ts-ignore
+      (lines[3].trim().split("\\").at(-1) || undefined)?.replace(/^at /, "");
       if (callerLine) {
         return `\x1b[90m${timestamp} <\x1b[0;38;2;104;173;0;49m${callerLine
           .replaceAll(")", "")
