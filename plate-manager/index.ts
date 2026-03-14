@@ -6,14 +6,10 @@ import { sql_init } from "./sql/init";
 import { mkdir } from "node:fs/promises";
 import { authRouter } from "./accounts";
 import "dotenv/config";
-import {
-  SERVICE_KEY,
-  handlePingMessage,
-  startPingLoop,
-  stopPingLoop,
-} from "./service";
+import { SERVICE_KEY, handlePingMessage, startPingLoop, stopPingLoop } from "./service";
 type PingPacket = {
   type: "ping" | "pong";
+  time?: number;
 };
 import type { ServerWebSocket } from "bun";
 import { stream_lyrics } from "./martellare";
@@ -132,6 +128,8 @@ const server = Bun.serve({
       const rawMessage =
         typeof message === "string" ? message : message.toString();
 
+      log("WS/IN", ws.data.id + ":", rawMessage);
+
       let parsedMessage: unknown;
       try {
         parsedMessage = JSON.parse(rawMessage);
@@ -149,11 +147,6 @@ const server = Bun.serve({
         (parsedMessage.type === "ping" || parsedMessage.type === "pong")
       ) {
         handlePingMessage(ws, parsedMessage as PingPacket);
-        connectedServers[ws.data.id] = {
-          type: ws.data.type,
-          socket: ws,
-          latency: ws.data.latency,
-        };
         return;
       }
 

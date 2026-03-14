@@ -30,54 +30,30 @@ function getPrivateServiceKey() {
 export const SERVICE_KEY = getPrivateServiceKey();
 
 const pingTimeouts = new Map<ManagedServerWebSocket, PingTimer>();
-const pingIntervals = new Map<ManagedServerWebSocket, PingTimer>();
+const PING_INTERVAL_MS = 30_000;
+const PING_GRACE_MS = 5_000;
 
 function setPingTimeout(ws: ManagedServerWebSocket) {
   const existing = pingTimeouts.get(ws);
-  if (existing) clearTimeout(existing);
+  if (existing) {
+    clearTimeout(existing);
+  }
 
   const timeout = setTimeout(() => {
-    log("Server did not respond to ping, disconnecting...");
+    log("Server stopped sending pings, disconnecting...");
     stopPingLoop(ws);
     ws.close();
-  }, 60_000);
+  }, PING_INTERVAL_MS + PING_GRACE_MS);
 
   pingTimeouts.set(ws, timeout);
 }
 
-function sendPing(ws: ManagedServerWebSocket) {
-  if (ws.readyState !== WebSocket.OPEN) {
-    stopPingLoop(ws);
-    return;
-  }
-
-  ws.send(
-    JSON.stringify({
-      type: "ping" satisfies PingMessage["type"],
-      time: Date.now(),
-    }),
-  );
+export function startPingLoop(ws: ManagedServerWebSocket) {
+  stopPingLoop(ws);
   setPingTimeout(ws);
 }
 
-export function startPingLoop(ws: ManagedServerWebSocket) {
-  stopPingLoop(ws);
-  sendPing(ws);
-
-  const interval = setInterval(() => {
-    sendPing(ws);
-  }, 30_000);
-
-  pingIntervals.set(ws, interval);
-}
-
 export function stopPingLoop(ws: ManagedServerWebSocket) {
-  const interval = pingIntervals.get(ws);
-  if (interval) {
-    clearInterval(interval);
-    pingIntervals.delete(ws);
-  }
-
   const timeout = pingTimeouts.get(ws);
   if (timeout) {
     clearTimeout(timeout);
@@ -89,12 +65,13 @@ export function handlePingMessage(
   ws: ManagedServerWebSocket,
   message: PingMessage,
 ) {
-  const latency =
-    typeof message.time === "number"
-      ? Math.max(0, Date.now() - message.time)
-      : 100;
-
   if (message.type === "ping") {
+    ws.data.latency =
+      typeof message.time === "number"
+        ? Math.max(0, Date.now() - message.time)
+        : 100;
+    setPingTimeout(ws);
+
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(
         JSON.stringify({
@@ -107,7 +84,6 @@ export function handlePingMessage(
   }
 
   if (message.type === "pong") {
-    ws.data.latency = latency;
-    setPingTimeout(ws);
+    log("Ignoring unexpected pong from", ws.data.id);
   }
 }
