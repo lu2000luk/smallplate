@@ -32,10 +32,12 @@ function safeParseJson<T>(value: string | null, fallback: T): T {
 function createRandomToken(length = 48): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
 
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  let result = "";
+  for (const byte of bytes) {
+    result += chars.charAt(byte % chars.length);
   }
 
   return result;
@@ -75,6 +77,26 @@ export function listApiKeysByPlate(plateId: number): PlateApiKeyRecord[] {
   };
 
   return statement.all(plateId);
+}
+
+export function getApiKeyRecord(apiKey: string): PlateApiKeyRecord | null {
+  const statement = db.query(
+    "SELECT id, plate_id, api_key, created_at FROM api_keys WHERE api_key = ? LIMIT 1",
+  ) as {
+    get(apiKey: string): PlateApiKeyRecord | null;
+  };
+
+  return statement.get(apiKey) ?? null;
+}
+
+export function getApiKeyById(id: number): PlateApiKeyRecord | null {
+  const statement = db.query(
+    "SELECT id, plate_id, api_key, created_at FROM api_keys WHERE id = ? LIMIT 1",
+  ) as {
+    get(id: number): PlateApiKeyRecord | null;
+  };
+
+  return statement.get(id) ?? null;
 }
 
 export function deleteApiKeyById(id: number): boolean {

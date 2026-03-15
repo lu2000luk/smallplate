@@ -6,7 +6,12 @@ import { sql_init } from "./sql/init";
 import { mkdir } from "node:fs/promises";
 import { authRouter } from "./accounts";
 import "dotenv/config";
-import { SERVICE_KEY, handlePingMessage, startPingLoop, stopPingLoop } from "./service";
+import {
+  SERVICE_KEY,
+  handlePingMessage,
+  startPingLoop,
+  stopPingLoop,
+} from "./service";
 type PingPacket = {
   type: "ping" | "pong";
   time?: number;
@@ -63,7 +68,12 @@ const server = Bun.serve({
       );
     }
 
-    if (url.pathname.startsWith("/auth")) {
+    if (
+      url.pathname.startsWith("/auth") ||
+      url.pathname.startsWith("/services") ||
+      url.pathname.startsWith("/plate") ||
+      url.pathname.startsWith("/api-keys")
+    ) {
       return authRouter(req, url);
     }
 

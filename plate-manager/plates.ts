@@ -1,5 +1,6 @@
 import { connectedServers, type ServerTypes } from ".";
 import {
+  getApiKeyRecord,
   getPlateById,
   getPlateDataObject,
   getPlateServers,
@@ -27,6 +28,18 @@ type CreateServiceResult =
       message: string;
     };
 
+type DisableServiceResult =
+  | {
+      success: true;
+      plateId: number;
+      service: ServerTypes;
+      serverId: string | null;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
 type PendingCreateRequest = {
   serverId: string;
   plateId: number;
@@ -46,6 +59,32 @@ type ServerErrorMessage = {
   id?: number;
   message?: string;
   short?: string;
+};
+
+type PlateLifecycleEvent = {
+  type: "delete";
+  id: number;
+};
+
+type ApiKeyInvalidateEvent = {
+  type: "invalidate";
+  key: string;
+};
+
+type ServerCheckMessage = {
+  type: "check";
+  request_id: string;
+  plate_id: string | number;
+  key: string;
+  service: string;
+};
+
+type ServerCheckResponseMessage = {
+  type: "check_response";
+  request_id: string;
+  plate_id: string;
+  key: string;
+  valid: boolean;
 };
 
 const CREATE_SERVICE_TIMEOUT_MS = 30_000;
@@ -171,6 +210,10 @@ function chooseLeastLoadedServer(service: ServerTypes): string | null {
   return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
 }
 
+function requiresCreateConfirmation(service: ServerTypes): boolean {
+  return service === "db";
+}
+
 function waitForCreated(
   serverId: string,
   plateId: number,
@@ -209,6 +252,73 @@ function rollbackPlateState(
 ) {
   setPlateDataObject(plateId, previousData);
   setPlateServers(plateId, previousServers);
+}
+
+function parsePlateId(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const parsed = Number.parseInt(value, 10);
+    return parsed > 0 ? parsed : null;
+  }
+
+  return null;
+}
+
+function sendCheckResponse(serverId: string, message: ServerCheckResponseMessage) {
+  const server = connectedServers[serverId];
+  if (!server || server.socket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+
+  server.socket.send(JSON.stringify(message));
+}
+
+function handleCheckMessage(serverId: string, message: Partial<ServerCheckMessage>) {
+  if (
+    typeof message.request_id !== "string" ||
+    message.request_id.length === 0 ||
+    typeof message.key !== "string" ||
+    message.key.length === 0 ||
+    typeof message.service !== "string"
+  ) {
+    return true;
+  }
+
+  const plateId = parsePlateId(message.plate_id);
+  if (plateId === null) {
+    sendCheckResponse(serverId, {
+      type: "check_response",
+      request_id: message.request_id,
+      plate_id: String(message.plate_id ?? ""),
+      key: message.key,
+      valid: false,
+    });
+    return true;
+  }
+
+  const connectedServer = connectedServers[serverId];
+  const assignedServers = getPlateServers(plateId);
+  const apiKey = getApiKeyRecord(message.key);
+  const valid =
+    !!connectedServer &&
+    isServiceType(message.service) &&
+    connectedServer.type === message.service &&
+    assignedServers !== null &&
+    assignedServers[message.service] === serverId &&
+    apiKey?.plate_id === plateId;
+
+  sendCheckResponse(serverId, {
+    type: "check_response",
+    request_id: message.request_id,
+    plate_id: String(plateId),
+    key: message.key,
+    valid,
+  });
+
+  return true;
 }
 
 export function handleServerMessage(
@@ -264,6 +374,10 @@ export function handleServerMessage(
     }
 
     return true;
+  }
+
+  if (type === "check") {
+    return handleCheckMessage(serverId, message as Partial<ServerCheckMessage>);
   }
 
   return false;
@@ -372,17 +486,21 @@ export async function createService(
     data: nextData,
   };
 
-  const waitPromise = waitForCreated(serverId, plateId, service);
-
   try {
-    selectedServer.socket.send(
-      JSON.stringify({
-        type: "create",
-        data: payload,
-      }),
-    );
+    let createdId = plateId;
 
-    const createdId = await waitPromise;
+    if (requiresCreateConfirmation(service)) {
+      const waitPromise = waitForCreated(serverId, plateId, service);
+
+      selectedServer.socket.send(
+        JSON.stringify({
+          type: "create",
+          data: payload,
+        }),
+      );
+
+      createdId = await waitPromise;
+    }
 
     log(
       "Created service for plate",
@@ -410,5 +528,113 @@ export async function createService(
           ? error.message
           : "Failed while waiting for server confirmation.",
     };
+  }
+}
+
+export function disableService(
+  plateId: number,
+  service: ServerTypes,
+): DisableServiceResult {
+  const plate = getPlateById(plateId);
+  if (!plate) {
+    return {
+      success: false,
+      message: "Plate does not exist.",
+    };
+  }
+
+  const currentDataRaw = getPlateDataObject(plateId);
+  const currentServersRaw = getStoredPlateServerMap(plateId);
+
+  if (currentDataRaw === null || currentServersRaw === null) {
+    return {
+      success: false,
+      message: "Failed to load plate state.",
+    };
+  }
+
+  const currentData: Record<string, unknown> = {
+    ...currentDataRaw,
+  };
+  const currentServers: PlateServerMap = {
+    ...currentServersRaw,
+  };
+
+  const enabledServices = new Set(parseEnabledServices(currentData));
+  const assignedServerId = currentServers[service] ?? null;
+
+  if (!enabledServices.has(service) && assignedServerId === null) {
+    return {
+      success: false,
+      message: "Service is not enabled for this plate.",
+    };
+  }
+
+  enabledServices.delete(service);
+
+  const nextData: Record<string, unknown> = {
+    ...currentData,
+    enabled_services: [...enabledServices],
+  };
+
+  const nextServers: PlateServerMap = {
+    ...currentServers,
+  };
+  delete nextServers[service];
+
+  const dataUpdated = setPlateDataObject(plateId, nextData);
+  const serversUpdated = setPlateServers(plateId, nextServers);
+
+  if (!dataUpdated || !serversUpdated) {
+    rollbackPlateState(plateId, currentData, currentServers);
+    return {
+      success: false,
+      message: "Failed to update plate state while disabling service.",
+    };
+  }
+
+  return {
+    success: true,
+    plateId,
+    service,
+    serverId: assignedServerId,
+  };
+}
+
+export function invalidateApiKeyEverywhere(apiKey: string) {
+  const payload: ApiKeyInvalidateEvent = {
+    type: "invalidate",
+    key: apiKey,
+  };
+  const encodedPayload = JSON.stringify(payload);
+
+  for (const server of Object.values(connectedServers)) {
+    if (server.socket.readyState !== WebSocket.OPEN) {
+      continue;
+    }
+
+    server.socket.send(encodedPayload);
+  }
+}
+
+export function deletePlateOnServer(serverId: string, plateId: number) {
+  const server = connectedServers[serverId];
+  if (!server || server.socket.readyState !== WebSocket.OPEN) {
+    return false;
+  }
+
+  server.socket.send(
+    JSON.stringify({
+      type: "delete",
+      id: plateId,
+    } satisfies PlateLifecycleEvent),
+  );
+
+  return true;
+}
+
+export function deletePlateEverywhere(plateId: number) {
+  for (const serverId of Object.keys(connectedServers)) {
+    deletePlateOnServer(serverId, plateId);
   }
 }

@@ -16,7 +16,6 @@ export async function sql_init(users = true, plates = true) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         auth_key TEXT NOT NULL UNIQUE,
-        created_at INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
