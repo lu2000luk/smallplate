@@ -2,6 +2,9 @@
 // POST /{plateID}/publish/{channel}
 // GET /{plateID}/subscribe/{channel}
 // GET /{plateID}/ws/subscribe/{channel}
+// POST /{plateID}/pubsub/{channel}/publish
+// GET /{plateID}/pubsub/{channel}/subscribe
+// GET /{plateID}/pubsub/{channel}/ws
 package routes
 
 import (
@@ -17,7 +20,7 @@ import (
 )
 
 func registerPubSub(mux *http.ServeMux, deps *plate.Dependencies) {
-	mux.HandleFunc("POST /{plateID}/publish/{key}", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+	publish := plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
 		channel, err := plate.PathValue(r, "key")
 		if err != nil {
 			return err
@@ -38,8 +41,8 @@ func registerPubSub(mux *http.ServeMux, deps *plate.Dependencies) {
 		}
 		plate.WriteOK(w, http.StatusOK, map[string]any{"receivers": receivers, "channel": channel})
 		return nil
-	}))
-	mux.HandleFunc("GET /{plateID}/subscribe/{key}", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+	})
+	subscribe := plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
 		channel, err := plate.PathValue(r, "key")
 		if err != nil {
 			return err
@@ -87,8 +90,13 @@ func registerPubSub(mux *http.ServeMux, deps *plate.Dependencies) {
 				flusher.Flush()
 			}
 		}
-	}))
+	})
+	mux.HandleFunc("POST /{plateID}/publish/{key}", publish)
+	mux.HandleFunc("POST /{plateID}/pubsub/{key}/publish", publish)
+	mux.HandleFunc("GET /{plateID}/subscribe/{key}", subscribe)
+	mux.HandleFunc("GET /{plateID}/pubsub/{key}/subscribe", subscribe)
 	mux.HandleFunc("GET /{plateID}/ws/subscribe/{key}", wsSubscribeHandler(deps))
+	mux.HandleFunc("GET /{plateID}/pubsub/{key}/ws", wsSubscribeHandler(deps))
 }
 
 func wsSubscribeHandler(deps *plate.Dependencies) http.HandlerFunc {

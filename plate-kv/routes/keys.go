@@ -6,6 +6,12 @@
 // POST /{plateID}/scan/hashes/{key}
 // POST /{plateID}/scan/sets/{key}
 // POST /{plateID}/scan/zsets/{key}
+// DELETE /{plateID}/keys/exact/{key}
+// POST /{plateID}/keys/delete
+// POST /{plateID}/keys/{key}/expire
+// DELETE /{plateID}/keys/{key}/expire
+// POST /{plateID}/keys/{key}/rename
+// POST /{plateID}/keys/{key}/copy
 // DELETE /{plateID}/keys/{pattern}
 package routes
 
@@ -13,6 +19,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 
@@ -100,6 +107,121 @@ func registerKeys(mux *http.ServeMux, deps *plate.Dependencies) {
 	mux.HandleFunc("POST /{plateID}/scan/hashes/{key}", scanCollectionHandler(deps, "HSCAN"))
 	mux.HandleFunc("POST /{plateID}/scan/sets/{key}", scanCollectionHandler(deps, "SSCAN"))
 	mux.HandleFunc("POST /{plateID}/scan/zsets/{key}", scanCollectionHandler(deps, "ZSCAN"))
+	mux.HandleFunc("DELETE /{plateID}/keys/exact/{key}", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		result, err := execute(r, deps, plateID, "DEL", key)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
+	mux.HandleFunc("POST /{plateID}/keys/delete", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		var request struct {
+			Keys []string `json:"keys"`
+		}
+		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		if err := requireNonEmptyStrings(request.Keys, "keys"); err != nil {
+			return err
+		}
+		args := make([]any, 0, len(request.Keys))
+		for _, key := range request.Keys {
+			args = append(args, key)
+		}
+		result, err := execute(r, deps, plateID, "DEL", args...)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
+	mux.HandleFunc("POST /{plateID}/keys/{key}/expire", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		var request struct {
+			TTLMS int64 `json:"ttl_ms"`
+		}
+		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		if request.TTLMS <= 0 {
+			return plate.NewAPIError(http.StatusBadRequest, "invalid_request", "ttl_ms must be greater than zero")
+		}
+		result, err := execute(r, deps, plateID, "PEXPIRE", key, strconv.FormatInt(request.TTLMS, 10))
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
+	mux.HandleFunc("DELETE /{plateID}/keys/{key}/expire", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		result, err := execute(r, deps, plateID, "PERSIST", key)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
+	mux.HandleFunc("POST /{plateID}/keys/{key}/rename", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		var request struct {
+			Destination string `json:"destination"`
+		}
+		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		destination, err := requiredString(request.Destination, "destination")
+		if err != nil {
+			return err
+		}
+		result, err := execute(r, deps, plateID, "RENAME", key, destination)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
+	mux.HandleFunc("POST /{plateID}/keys/{key}/copy", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		var request struct {
+			Destination string `json:"destination"`
+			Replace     bool   `json:"replace"`
+		}
+		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		destination, err := requiredString(request.Destination, "destination")
+		if err != nil {
+			return err
+		}
+		args := []any{key, destination}
+		if request.Replace {
+			args = append(args, "REPLACE")
+		}
+		result, err := execute(r, deps, plateID, "COPY", args...)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
+		return nil
+	}))
 	mux.HandleFunc("DELETE /{plateID}/keys/{key}", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
 		pattern, err := plate.PathValue(r, "key")
 		if err != nil {
@@ -129,7 +251,7 @@ func scanCollectionHandler(deps *plate.Dependencies, command string) http.Handle
 			return err
 		}
 		args := []any{key, strconv.FormatUint(request.Cursor, 10)}
-		if request.Match != "" {
+		if strings.TrimSpace(request.Match) != "" {
 			args = append(args, "MATCH", request.Match)
 		}
 		if request.Count > 0 {

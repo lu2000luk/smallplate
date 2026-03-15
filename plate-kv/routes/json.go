@@ -1,6 +1,7 @@
 // Endpoints contained in this file:
 // GET /{plateID}/json/{key}
 // POST /{plateID}/json/{key}
+// DELETE /{plateID}/json/{key}
 package routes
 
 import (
@@ -49,6 +50,18 @@ func registerJSON(mux *http.ServeMux, deps *plate.Dependencies) {
 			return err
 		}
 		plate.WriteOK(w, http.StatusOK, map[string]any{"stored": true})
+		return nil
+	}))
+	mux.HandleFunc("DELETE /{plateID}/json/{key}", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		key, err := plate.PathValue(r, "key")
+		if err != nil {
+			return err
+		}
+		result, err := execute(r, deps, plateID, "DEL", key)
+		if err != nil {
+			return err
+		}
+		writeResult(w, result)
 		return nil
 	}))
 }

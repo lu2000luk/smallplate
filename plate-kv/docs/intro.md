@@ -2,96 +2,109 @@
 
 ## Overview
 
-Plate-KV is a Redis-compatible HTTP API server that provides RESTful access to key-value data operations. Each "plate" represents an isolated namespace, allowing multiple independent datasets within a single server.
+Plate-KV is a Redis-compatible HTTP API server that provides REST-like access to key-value data operations. Each `plateID` is an isolated namespace, so multiple applications or environments can share one server without colliding keys.
 
 ## Base URL
 
-```
+```text
 %%URL%%/{plateID}/...
 ```
 
-All endpoints require a `plateID` path parameter that identifies the data partition.
+All endpoints require a `plateID` path parameter.
 
 ## Authentication
 
-All endpoints require authentication via the `Authorization` header with your API key:
+All endpoints require an `Authorization` header with your API key:
 
-```
+```text
 Authorization: YOUR_API_KEY
 ```
 
-See [authentication.md](authentication.md) for details.
+See `authentication.md` for more details.
 
-## Request/Response Format
+## Request Styles
+
+Plate-KV supports two API styles:
+
+- Wrapper endpoints are the preferred modern HTTP interface.
+- Command endpoints remain available for backward compatibility and advanced Redis-compatible access.
+
+### Wrapper Endpoints
+
+Wrapper endpoints use descriptive URLs and typed JSON bodies.
+
+Example:
+
+```json
+POST /{plateID}/hashes/set
+{
+  "key": "user:1",
+  "value": {
+    "name": "Ada",
+    "age": 30
+  }
+}
+```
 
 ### Command Endpoints
 
-Most data operations use a command-based pattern:
+Command endpoints use a Redis-style request payload:
 
-**Request:**
 ```json
 {
-  "command": "COMMAND_NAME",
-  "args": ["arg1", "arg2", "..."]
+  "command": "SET",
+  "args": ["mykey", "hello world"]
 }
 ```
 
-**Response:**
+## Response Format
+
+Success responses use a consistent envelope:
+
 ```json
 {
-  "result": <value>
+  "ok": true,
+  "data": {
+    "result": "OK"
+  }
 }
 ```
 
-### JSON Endpoints
+Some direct endpoints return typed payloads inside `data` instead of `data.result`, such as `/{plateID}/keys/{key}` and `/{plateID}/json/{key}`.
 
-Some endpoints use direct REST patterns with JSON bodies:
+Error responses use:
 
-**Request:**
 ```json
 {
-  "key": "value",
-  "additional": "fields"
+  "ok": false,
+  "error": {
+    "code": "invalid_request",
+    "message": "human readable message"
+  }
 }
 ```
 
 ## API Categories
 
-| Category | Endpoint Prefix | Description |
-|----------|-----------------|-------------|
-| Keys | `/keys/` | Key management, scanning, TTL |
-| Strings | `/strings/` | String operations |
-| Hashes | `/hashes/` | Hash/field-value operations |
-| Lists | `/lists/` | List operations |
-| Sets | `/sets/` | Set operations |
-| Sorted Sets | `/zsets/` | Sorted set operations |
-| Streams | `/streams/` | Stream operations |
-| Bitmaps | `/bitmaps/` | Bitmap operations |
-| Geo | `/geo/` | Geospatial operations |
-| Pub/Sub | `/publish/`, `/subscribe/` | Publish/Subscribe messaging |
+| Category | Preferred Prefix | Description |
+| --- | --- | --- |
+| Keys | `/keys/` | Key inspection, delete, rename, copy, expiry, scan |
+| Strings | `/strings/` | String values, counters, ranges |
+| Hashes | `/hashes/` | Field-value storage |
+| Lists | `/lists/` | Ordered collections |
+| Sets | `/sets/` | Unique member collections |
+| Sorted Sets | `/zsets/` | Ranked collections |
+| Streams | `/streams/` | Append-only event data |
+| Bitmaps | `/bitmaps/` | Efficient bit storage |
+| Geo | `/geo/` | Geospatial storage and search |
+| JSON | `/json/` | Store and retrieve JSON values |
+| Pub/Sub | `/pubsub/`, `/publish/`, `/subscribe/` | Publish and subscribe |
 | Pipeline | `/pipeline` | Batch command execution |
 | Transaction | `/transaction` | Atomic transaction execution |
-| JSON | `/json/` | JSON storage |
 | Info | `/info` | Plate statistics |
 
-## Error Responses
+## Notes
 
-Errors return appropriate HTTP status codes with JSON bodies:
-
-```json
-{
-  "error": "error_code",
-  "message": "human readable message"
-}
-```
-
-Common status codes:
-- `200 OK` - Success
-- `400 Bad Request` - Invalid request format or parameters
-- `401 Unauthorized` - Missing or invalid authentication
-- `404 Not Found` - Key does not exist
-- `500 Internal Server Error` - Server-side errors
-
-## Rate Limiting
-
-No built-in rate limiting. Implement at proxy level if needed.
+- Pipelines and transactions are unchanged.
+- Wrapper endpoints still execute through the command layer internally, so plate namespacing and command rewriting continue to apply.
+- Keys or fields containing `/` should prefer body-based wrapper endpoints rather than path-based variants.
