@@ -85,3 +85,57 @@ POST /{plateID}/zsets/command
   "args": ["leaderboard", 100, "player1", 200, "player2"]
 }
 ```
+
+## Command Endpoints
+
+### `POST /{plateID}/zsets/command`
+
+Execute allowed sorted set commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| ZADD | Add scored members |
+| ZREM | Remove members |
+| ZSCORE | Get score |
+| ZRANK | Get rank (ascending) |
+| ZREVRANK | Get rank (descending) |
+| ZRANGE | Get members by rank |
+| ZCARD | Get member count |
+| ZCOUNT | Count by score |
+| ZLEXCOUNT | Count by lex |
+| ZINCRBY | Increment score |
+| ZPOPMIN | Pop lowest |
+| ZPOPMAX | Pop highest |
+| ZRANDMEMBER | Random member |
+| ZUNIONSTORE | Union and store |
+| ZINTERSTORE | Intersection and store |
+| ZDIFFSTORE | Difference and store |
+| ZRANGESTORE | Range and store |
+| ZMSCORE | Get multiple scores |
+
+**Query Parameters for ZRANGE:**
+- `start` (optional): Start index (default: 0)
+- `stop` (optional): End index (default: -1)
+- `order` (optional): `asc` or `desc`
+- `with_scores` (optional): Include scores in response
+
+**Query Parameters for ZRANDMEMBER:**
+- `count` (optional): Number of members
+- `with_scores` (optional): Include scores
+
+### `POST /{plateID}/zsets/{key}/command`
+
+Execute allowed commands on a specific sorted set key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/zsets/leaderboard/command
+{
+  "command": "ZCARD"
+}
+```

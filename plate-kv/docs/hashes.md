@@ -157,3 +157,46 @@ POST /{plateID}/hashes/command
   "args": ["user:1", "name", "Ada", "age", "30"]
 }
 ```
+
+## Command Endpoints
+
+### `POST /{plateID}/hashes/command`
+
+Execute allowed hash commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| HSET | Set field(s) |
+| HGET | Get one field |
+| HMGET | Get multiple fields |
+| HGETALL | Get all fields |
+| HDEL | Delete field(s) |
+| HEXISTS | Check field existence |
+| HINCRBY | Increment integer |
+| HINCRBYFLOAT | Increment float |
+| HKEYS | Get all field names |
+| HVALS | Get all values |
+| HLEN | Get field count |
+| HSETNX | Set if absent |
+| HRANDFIELD | Get random field(s) |
+
+**Query Parameters for HRANDFIELD:**
+- `count` (optional): Number of fields to return (negative for distinct)
+- `with_values` (optional): Include values in response
+
+### `POST /{plateID}/hashes/{key}/command`
+
+Execute allowed commands on a specific hash key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/hashes/user:1/command
+{
+  "command": "HLEN"
+}
+```

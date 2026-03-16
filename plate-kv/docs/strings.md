@@ -131,6 +131,10 @@ Read a substring:
 GET /{plateID}/strings/range/greeting?start=0&end=4
 ```
 
+Query parameters:
+- `start` (optional): Start index (default: 0)
+- `end` (optional): End index (default: -1, meaning to the end)
+
 Replace part of a string:
 
 ```json
@@ -169,5 +173,56 @@ POST /{plateID}/strings/command
 {
   "command": "SET",
   "args": ["mykey", "hello world", "EX", "3600"]
+}
+```
+
+## Command Endpoints
+
+### `POST /{plateID}/strings/command`
+
+Execute allowed string commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GET | Get value |
+| SET | Set value |
+| MGET | Get multiple values |
+| MSET | Set multiple values |
+| GETEX | Get and optionally set expiry |
+| GETDEL | Get and delete |
+| INCR | Increment by 1 |
+| DECR | Decrement by 1 |
+| INCRBY | Increment by integer |
+| DECRBY | Decrement by integer |
+| INCRBYFLOAT | Increment by float |
+| APPEND | Append to string |
+| STRLEN | Get string length |
+| SETRANGE | Replace substring |
+| GETRANGE | Get substring |
+
+**Request:**
+
+```json
+POST /{plateID}/strings/command
+{
+  "command": "INCR",
+  "args": ["counter"]
+}
+```
+
+### `POST /{plateID}/strings/{key}/command`
+
+Execute allowed commands on a specific string key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/strings/mykey/command
+{
+  "command": "STRLEN"
 }
 ```

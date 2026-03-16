@@ -107,6 +107,12 @@ Scan keys:
 GET /{plateID}/scan?cursor=0&count=100&match=user:*
 ```
 
+Scan with type filter (string, list, set, zset, hash, stream):
+
+```text
+GET /{plateID}/scan?cursor=0&count=100&match=user:*&type=string
+```
+
 Scan a hash:
 
 ```json
@@ -115,5 +121,79 @@ POST /{plateID}/scan/hashes/user:1
   "cursor": 0,
   "match": "*",
   "count": 100
+}
+```
+
+## Command Endpoints
+
+### `POST /{plateID}/keys/command`
+
+Execute allowed key commands across the plate. This endpoint supports wildcard operations like SCAN, MGET, MSET, and bulk delete.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GET | Get value |
+| SET | Set value |
+| MGET | Get multiple values |
+| MSET | Set multiple values |
+| DEL | Delete keys |
+| UNLINK | Async delete keys |
+| EXISTS | Check key existence |
+| TYPE | Get key type |
+| RENAME | Rename key |
+| COPY | Copy key |
+| EXPIRE | Set expiry (seconds) |
+| PEXPIRE | Set expiry (milliseconds) |
+| EXPIREAT | Set expiry timestamp (seconds) |
+| PEXPIREAT | Set expiry timestamp (milliseconds) |
+| TTL | Get TTL (seconds) |
+| PTTL | Get TTL (milliseconds) |
+| PERSIST | Remove expiry |
+| GETEX | Get and optionally set expiry |
+| GETDEL | Get and delete |
+| SCAN | Iterate keys |
+
+**Request:**
+
+```json
+POST /{plateID}/keys/command
+{
+  "command": "SCAN",
+  "args": ["0", "MATCH", "user:*", "COUNT", "100"]
+}
+```
+
+### `POST /{plateID}/keys/{key}/command`
+
+Execute allowed commands on a specific key.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GET | Get value |
+| SET | Set value |
+| DEL | Delete key |
+| UNLINK | Async delete |
+| EXISTS | Check existence |
+| TYPE | Get type |
+| EXPIRE | Set expiry (seconds) |
+| PEXPIRE | Set expiry (milliseconds) |
+| EXPIREAT | Set expiry timestamp |
+| PEXPIREAT | Set expiry timestamp |
+| TTL | Get TTL (seconds) |
+| PTTL | Get TTL (milliseconds) |
+| PERSIST | Remove expiry |
+| GETEX | Get and optionally set expiry |
+| GETDEL | Get and delete |
+
+**Request:**
+
+```json
+POST /{plateID}/keys/mykey/command
+{
+  "command": "GET"
 }
 ```

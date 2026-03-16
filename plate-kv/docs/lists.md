@@ -74,6 +74,72 @@ POST /{plateID}/lists/move
 }
 ```
 
+### Get Item by Index
+
+```text
+GET /{plateID}/lists/item/jobs/0
+```
+
+### Get Length
+
+```text
+GET /{plateID}/lists/length/jobs
+```
+
+### Find Position (LPOS)
+
+```json
+POST /{plateID}/lists/position
+{
+  "key": "jobs",
+  "value": "urgent",
+  "rank": 1,
+  "count": 5
+}
+```
+
+Query parameters (via JSON body):
+- `rank` (optional): Start searching from this position
+- `count` (optional): Number of positions to return
+- `maxlen` (optional): Limit search depth
+
+### Set Item by Index
+
+```json
+POST /{plateID}/lists/set
+{
+  "key": "jobs",
+  "index": 0,
+  "value": "replaced"
+}
+```
+
+### Remove Items
+
+```json
+POST /{plateID}/lists/remove
+{
+  "key": "jobs",
+  "value": "done",
+  "count": 1
+}
+```
+
+Set `count` to 0 to remove all matching items.
+
+### Trim List
+
+```json
+POST /{plateID}/lists/trim
+{
+  "key": "jobs",
+  "start": 0,
+  "stop": 99
+}
+```
+
+Keeps only elements from index 0 to 99, removing everything after.
+
 ## Command Compatibility
 
 ```json
@@ -81,5 +147,53 @@ POST /{plateID}/lists/command
 {
   "command": "LPUSH",
   "args": ["mylist", "a", "b", "c"]
+}
+```
+
+## Command Endpoints
+
+### `POST /{plateID}/lists/command`
+
+Execute allowed list commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| LPUSH | Push to left |
+| RPUSH | Push to right |
+| LPOP | Pop from left |
+| RPOP | Pop from right |
+| LLEN | Get length |
+| LRANGE | Get range |
+| LINDEX | Get by index |
+| LPOS | Find position |
+| LSET | Set by index |
+| LINSERT | Insert relative to pivot |
+| LREM | Remove items |
+| LTRIM | Trim list |
+| LMOVE | Move between lists |
+
+**Query Parameters for LRANGE:**
+- `start` (optional): Start index (default: 0)
+- `stop` (optional): End index (default: -1)
+
+**Query Parameters for LPOS:**
+- `rank` (optional): Start position from this rank
+- `count` (optional): Number of matches to return
+- `maxlen` (optional): Limit search length
+
+### `POST /{plateID}/lists/{key}/command`
+
+Execute allowed commands on a specific list key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/lists/mylist/command
+{
+  "command": "LLEN"
 }
 ```

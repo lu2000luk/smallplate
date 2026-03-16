@@ -86,3 +86,35 @@ POST /{plateID}/bitmaps/command
   "args": ["mybitmap", 500, 1]
 }
 ```
+
+## Command Endpoints
+
+### `POST /{plateID}/bitmaps/command`
+
+Execute allowed bitmap commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| SETBIT | Set a bit |
+| GETBIT | Get a bit |
+| BITCOUNT | Count set bits |
+| BITOP | Bitwise operations |
+| BITPOS | Find first bit |
+| BITFIELD | Bitfield operations |
+
+### `POST /{plateID}/bitmaps/{key}/command`
+
+Execute allowed commands on a specific bitmap key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/bitmaps/mybitmap/command
+{
+  "command": "BITCOUNT"
+}
+```

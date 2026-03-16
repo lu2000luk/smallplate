@@ -83,3 +83,40 @@ POST /{plateID}/geo/command
   "args": ["cities", -122.4194, 37.7749, "San Francisco"]
 }
 ```
+
+## Command Endpoints
+
+### `POST /{plateID}/geo/command`
+
+Execute allowed geo commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GEOADD | Add locations |
+| GEOPOS | Get coordinates |
+| GEODIST | Get distance |
+| GEOSEARCH | Search locations |
+| GEOSEARCHSTORE | Search and store results |
+
+**Query Parameters for GEODIST:**
+- `from` (required): First member
+- `to` (required): Second member
+- `unit` (optional): Distance unit - `m` (meters), `km` (kilometers), `mi` (miles), `ft` (feet). Default: `m`
+
+### `POST /{plateID}/geo/{key}/command`
+
+Execute allowed commands on a specific geo key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/geo/cities/command
+{
+  "command": "GEOPOS",
+  "args": ["San Francisco"]
+}
+```

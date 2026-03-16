@@ -105,3 +105,57 @@ POST /{plateID}/streams/command
   "args": ["events", "*", "type", "signup"]
 }
 ```
+
+## Command Endpoints
+
+### `POST /{plateID}/streams/command`
+
+Execute allowed stream commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| XADD | Add entry |
+| XLEN | Get length |
+| XRANGE | Forward range |
+| XREVRANGE | Reverse range |
+| XREAD | Read from streams |
+| XTRIM | Trim stream |
+| XDEL | Delete entries |
+| XINFO | Get stream info |
+| XGROUP | Manage groups |
+| XREADGROUP | Group read |
+| XACK | Acknowledge |
+| XPENDING | Pending entries |
+| XCLAIM | Claim messages |
+| XAUTOCLAIM | Auto claim |
+
+**Query Parameters for XRANGE/XREVRANGE:**
+- `start` (optional): Start ID (default: `-` for XRANGE, `+` for XREVRANGE)
+- `end` (optional): End ID (default: `+` for XRANGE, `-` for XREVRANGE)
+- `count` (optional): Limit results
+
+**Query Parameters for XINFO:**
+- `section` (optional): `full`, `stream`, `groups`, `consumers`
+
+**Query Parameters for XPENDING:**
+- `start` (optional): Start ID
+- `end` (optional): End ID
+- `count` (optional): Number of entries
+- `consumer` (optional): Filter by consumer
+
+### `POST /{plateID}/streams/{key}/command`
+
+Execute allowed commands on a specific stream key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+```json
+POST /{plateID}/streams/events/command
+{
+  "command": "XLEN"
+}
+```
