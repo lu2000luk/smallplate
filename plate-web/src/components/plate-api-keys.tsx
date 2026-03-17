@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import type { PlateApiKey } from "./plate-dashboard";
+import { maskApiKey } from "@/lib/utils";
 
 type PlateApiKeysProps = {
   apiKeys: PlateApiKey[];
@@ -89,7 +90,7 @@ export function PlateApiKeys({
             >
               <div>
                 <p className="font-mono text-sm font-medium">
-                  {apiKey.api_key}
+                  {apiKey.created_at}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Created {formatCreatedAt(apiKey.created_at)}
