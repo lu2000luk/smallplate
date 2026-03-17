@@ -19,3 +19,15 @@ export function authenticatedFetch(input: RequestInfo, init?: RequestInit) {
     headers,
   });
 }
+
+export const assertManagerUrl = () => {
+  const raw =
+    process.env.NEXT_PUBLIC_MANAGER_URL?.trim().replace(/\/+$/, "") ?? "";
+
+  if (!raw) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_MANAGER_URL. Set it in your plate-web env file.",
+    );
+  }
+  return raw;
+};

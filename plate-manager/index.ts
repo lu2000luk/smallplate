@@ -49,6 +49,17 @@ const server = Bun.serve({
   port: process.env.PORT ? parseInt(process.env.PORT) : 3200,
   fetch(req) {
     const url = new URL(req.url);
+    if (req.method === "OPTIONS" && !url.pathname.startsWith("/__")) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
+    }
+
     log("INBOUND", req.method, url.pathname);
     if (url.pathname === "/") {
       const now = new Date();
