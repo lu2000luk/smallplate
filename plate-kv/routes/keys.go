@@ -8,8 +8,8 @@
 // POST /{plateID}/scan/zsets/{key}
 // DELETE /{plateID}/keys/exact/{key}
 // POST /{plateID}/keys/delete
-// POST /{plateID}/keys/{key}/expire
-// DELETE /{plateID}/keys/{key}/expire
+// POST /{plateID}/keys/ttl
+// DELETE /{plateID}/keys/ttl
 // POST /{plateID}/keys/{key}/rename
 // POST /{plateID}/keys/{key}/copy
 // DELETE /{plateID}/keys/{pattern}
@@ -140,15 +140,16 @@ func registerKeys(mux *http.ServeMux, deps *plate.Dependencies) {
 		writeResult(w, result)
 		return nil
 	}))
-	mux.HandleFunc("POST /{plateID}/keys/{key}/expire", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
-		key, err := plate.PathValue(r, "key")
-		if err != nil {
-			return err
-		}
+	mux.HandleFunc("POST /{plateID}/keys/ttl", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
 		var request struct {
-			TTLMS int64 `json:"ttl_ms"`
+			Key   string `json:"key"`
+			TTLMS int64  `json:"ttl_ms"`
 		}
 		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		key, err := requiredString(request.Key, "key")
+		if err != nil {
 			return err
 		}
 		if request.TTLMS <= 0 {
@@ -161,8 +162,14 @@ func registerKeys(mux *http.ServeMux, deps *plate.Dependencies) {
 		writeResult(w, result)
 		return nil
 	}))
-	mux.HandleFunc("DELETE /{plateID}/keys/{key}/expire", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
-		key, err := plate.PathValue(r, "key")
+	mux.HandleFunc("DELETE /{plateID}/keys/ttl", plate.Authenticated(deps, func(w http.ResponseWriter, r *http.Request, plateID string) error {
+		var request struct {
+			Key string `json:"key"`
+		}
+		if err := plate.DecodeJSON(r, &request); err != nil {
+			return err
+		}
+		key, err := requiredString(request.Key, "key")
 		if err != nil {
 			return err
 		}

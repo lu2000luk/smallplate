@@ -9,8 +9,8 @@ The Keys API handles inspection, scan operations, expiry, rename, copy, and dele
 | GET | `/{plateID}/keys/{key}` | Get metadata and string preview |
 | DELETE | `/{plateID}/keys/exact/{key}` | Delete one exact key |
 | POST | `/{plateID}/keys/delete` | Delete many exact keys |
-| POST | `/{plateID}/keys/{key}/expire` | Set TTL in milliseconds |
-| DELETE | `/{plateID}/keys/{key}/expire` | Remove TTL |
+| POST | `/{plateID}/keys/ttl` | Set TTL in milliseconds |
+| DELETE | `/{plateID}/keys/ttl` | Remove TTL |
 | POST | `/{plateID}/keys/{key}/rename` | Rename a key |
 | POST | `/{plateID}/keys/{key}/copy` | Copy a key |
 | GET | `/{plateID}/scan` | Scan keys |
@@ -68,16 +68,20 @@ DELETE /{plateID}/keys/user:*
 Set expiry:
 
 ```json
-POST /{plateID}/keys/mykey/expire
+POST /{plateID}/keys/ttl
 {
+  "key": "mykey",
   "ttl_ms": 60000
 }
 ```
 
 Remove expiry:
 
-```text
-DELETE /{plateID}/keys/mykey/expire
+```json
+DELETE /{plateID}/keys/ttl
+{
+  "key": "mykey"
+}
 ```
 
 Rename:
