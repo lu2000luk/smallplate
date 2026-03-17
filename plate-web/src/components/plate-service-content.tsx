@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ServerIcon, CopyIcon, LinkIcon } from "lucide-react";
+import {
+  ServerIcon,
+  CopyIcon,
+  LinkIcon,
+  Link,
+  ExternalLink,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -65,7 +71,7 @@ export function PlateServiceContent({
         try {
           const managerUrl = assertManagerUrl();
           const response = await fetch(
-            `${managerUrl}/services/url?id=${assignedServerId}`
+            `${managerUrl}/services/url?id=${assignedServerId}`,
           );
           const data = await response.json();
           if (data.success && typeof data.url === "string") {
@@ -129,7 +135,9 @@ export function PlateServiceContent({
                 {isLoadingUrl ? (
                   <div className="flex items-center gap-2">
                     <Spinner />
-                    <span className="text-sm text-muted-foreground">Loading URL...</span>
+                    <span className="text-sm text-muted-foreground">
+                      Loading URL...
+                    </span>
                   </div>
                 ) : urlFetchError ? (
                   <div className="text-sm text-destructive-foreground">
@@ -141,21 +149,44 @@ export function PlateServiceContent({
                       <LinkIcon className="size-4" />
                       <span>{serverUrl}</span>
                     </div>
-                    <Button variant="outline" size="icon" onClick={handleCopyUrl} title="Copy URL">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyUrl}
+                      title="Copy URL"
+                    >
                       <CopyIcon className="size-4" />
                       <span className="sr-only">Copy URL</span>
                     </Button>
-                    {copiedUrl && <span className="text-xs text-success font-medium">Copied!</span>}
+                    {copiedUrl && (
+                      <span className="text-xs text-success font-medium">
+                        Copied!
+                      </span>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">No URL available</div>
+                  <div className="text-sm text-muted-foreground">
+                    No URL available
+                  </div>
                 )}
               </div>
             )}
 
-            <div className="pt-4">
+            <div className="pt-1 gap-2 flex">
+              {process.env.NEXT_PUBLIC_DOCS_URL && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const docs_url =
+                      process.env.NEXT_PUBLIC_DOCS_URL + "/" + serviceType;
+                    window.open(docs_url, "_blank");
+                  }}
+                >
+                  <ExternalLink /> Open docs
+                </Button>
+              )}
               <Button
-                variant="outline"
+                variant="destructive-outline"
                 onClick={onDisable}
                 disabled={isPending}
               >
