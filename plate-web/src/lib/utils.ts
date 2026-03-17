@@ -12,7 +12,7 @@ export function authenticatedFetch(input: RequestInfo, init?: RequestInit) {
   }
 
   const headers = new Headers(init?.headers || {});
-  headers.set("Authorization", `Bearer ${authKey}`);
+  headers.set("Authorization", `${authKey}`);
 
   return fetch(input, {
     ...init,

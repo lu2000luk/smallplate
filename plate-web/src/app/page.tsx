@@ -1,7 +1,8 @@
 "use client";
 
-import { Login } from "@/components/login";
 import { useEffect, useState } from "react";
+import { Home as HomeView } from "@/components/home";
+import { Login } from "@/components/login";
 
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -15,5 +16,5 @@ export default function Home() {
     }
   }, []);
 
-  return <div className="">{!loggedIn ? <Login /> : null}</div>;
+  return <div>{!loggedIn ? <Login /> : <HomeView />}</div>;
 }

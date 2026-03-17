@@ -5,7 +5,16 @@ import {
   deleteApiKeyById,
   deletePlate,
   getApiKeyById,
+  getPlateById,
+  listApiKeysByPlate,
+  listUserPlates,
   plateBelongsToUser,
+} from "./db";
+import type {
+  PlateApiKeyRecord,
+  PlateDataObject,
+  PlateRecord,
+  PlateServersObject,
 } from "./db";
 import {
   createUser,
@@ -136,6 +145,149 @@ function requireJsonBody(body: Awaited<ReturnType<typeof parseJsonBody>>) {
       400,
     ),
   };
+}
+
+function parseObjectRecord<T extends Record<string, unknown>>(
+  value: string | null,
+): T {
+  if (!value) {
+    return {} as T;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as T;
+    }
+  } catch {
+    return {} as T;
+  }
+
+  return {} as T;
+}
+
+function parsePlateServersObject(value: string | null): PlateServersObject {
+  const parsed = parseObjectRecord<Record<string, unknown>>(value);
+  const servers: PlateServersObject = {};
+
+  if (typeof parsed.db === "string") {
+    servers.db = parsed.db;
+  }
+
+  if (typeof parsed.kv === "string") {
+    servers.kv = parsed.kv;
+  }
+
+  return servers;
+}
+
+function parsePlateDataObject(value: string | null): PlateDataObject {
+  return parseObjectRecord<PlateDataObject>(value);
+}
+
+function serializePlateRecord(plate: PlateRecord) {
+  return {
+    id: plate.id,
+    user_id: plate.user_id,
+    name: plate.name,
+    servers: parsePlateServersObject(plate.servers),
+    data: parsePlateDataObject(plate.data),
+  };
+}
+
+function serializeRedactedApiKey(apiKey: PlateApiKeyRecord) {
+  return {
+    id: apiKey.id,
+    plate_id: apiKey.plate_id,
+    api_key: "[REDACTED]",
+    created_at: apiKey.created_at,
+  };
+}
+
+async function getPlateRoute(req: Request, url: URL): Promise<Response> {
+  const auth = requireLogin(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  const plateId = parsePositiveInteger(url.searchParams.get("plateId"));
+  if (plateId === null) {
+    return jsonResponse(
+      {
+        success: false,
+        message: "A valid plateId is required.",
+      },
+      400,
+    );
+  }
+
+  const plate = getPlateById(plateId);
+  if (!plate || plate.user_id !== auth.user.id) {
+    return jsonResponse(
+      {
+        success: false,
+        message: "Plate not found.",
+      },
+      404,
+    );
+  }
+
+  return jsonResponse({
+    success: true,
+    message: "Plate retrieved successfully.",
+    plate: serializePlateRecord(plate),
+  });
+}
+
+async function listUserPlatesRoute(req: Request): Promise<Response> {
+  const auth = requireLogin(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  const plates = listUserPlates(auth.user.id).map(serializePlateRecord);
+
+  return jsonResponse({
+    success: true,
+    message: "Plates retrieved successfully.",
+    plates,
+  });
+}
+
+async function listPlateApiKeysRoute(req: Request, url: URL): Promise<Response> {
+  const auth = requireLogin(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  const plateId = parsePositiveInteger(url.searchParams.get("plateId"));
+  if (plateId === null) {
+    return jsonResponse(
+      {
+        success: false,
+        message: "A valid plateId is required.",
+      },
+      400,
+    );
+  }
+
+  if (!plateBelongsToUser(plateId, auth.user.id)) {
+    return jsonResponse(
+      {
+        success: false,
+        message: "Plate not found.",
+      },
+      404,
+    );
+  }
+
+  const apiKeys = listApiKeysByPlate(plateId).map(serializeRedactedApiKey);
+
+  return jsonResponse({
+    success: true,
+    message: "API keys retrieved successfully.",
+    api_keys: apiKeys,
+  });
 }
 
 async function createPlateRoute(req: Request): Promise<Response> {
@@ -720,6 +872,14 @@ export function authRouter(
   req: Request,
   url: URL,
 ): Response | Promise<Response> {
+  if (url.pathname === "/plates/get" && req.method === "GET") {
+    return getPlateRoute(req, url);
+  }
+
+  if (url.pathname === "/plates/list" && req.method === "GET") {
+    return listUserPlatesRoute(req);
+  }
+
   if (url.pathname === "/plates/create" && req.method === "POST") {
     return createPlateRoute(req);
   }
@@ -730,6 +890,10 @@ export function authRouter(
 
   if (url.pathname === "/api-keys/create" && req.method === "POST") {
     return createPlateApiKeyRoute(req);
+  }
+
+  if (url.pathname === "/api-keys/list" && req.method === "GET") {
+    return listPlateApiKeysRoute(req, url);
   }
 
   if (url.pathname === "/api-keys/delete" && req.method === "POST") {

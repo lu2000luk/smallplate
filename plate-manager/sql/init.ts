@@ -1,5 +1,26 @@
 import { db } from "..";
 
+function getTableColumns(tableName: string): string[] {
+  const statement = db.query(`PRAGMA table_info(${tableName})`) as {
+    all(): Array<{ name: string }>;
+  };
+
+  return statement.all().map((column) => column.name);
+}
+
+function ensureTableColumn(
+  tableName: string,
+  columnName: string,
+  definition: string,
+) {
+  const columns = getTableColumns(tableName);
+  if (columns.includes(columnName)) {
+    return;
+  }
+
+  db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+}
+
 export async function sql_init(users = true, plates = true) {
   if (users) {
     db.run(`
@@ -41,6 +62,21 @@ export async function sql_init(users = true, plates = true) {
         data TEXT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
+    `);
+
+    ensureTableColumn("plates", "servers", "TEXT");
+    ensureTableColumn("plates", "data", "TEXT");
+
+    db.run(`
+      UPDATE plates
+      SET servers = '{}'
+      WHERE servers IS NULL;
+    `);
+
+    db.run(`
+      UPDATE plates
+      SET data = '{"enabled_services":[]}'
+      WHERE data IS NULL;
     `);
 
     db.run(`

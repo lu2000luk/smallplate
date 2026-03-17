@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { assertManagerUrl } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { useMemo, useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { assertManagerUrl } from "@/lib/utils";
 
 type AuthResponse = {
   success?: boolean;
@@ -46,7 +46,7 @@ export function Login() {
   };
 
   const doLogin = async (emailValue: string, passwordValue: string) => {
-    let success = true;
+    const success = true;
     const baseUrl = assertManagerUrl();
     const res = await fetch(`${baseUrl}/auth/login`, {
       method: "POST",
@@ -60,13 +60,11 @@ export function Login() {
 
     if (!res.ok || body.success === false) {
       throw new Error(body.message || "Login failed.");
-      success = false;
     }
 
     const authKey = resolveAuthKey(res, body);
     if (!authKey) {
       throw new Error("Login succeeded but no auth key was returned.");
-      success = false;
     }
 
     localStorage.setItem("authKey", authKey);
@@ -80,7 +78,6 @@ export function Login() {
     } catch (e) {
       console.error("Login failed", e);
       alert("Login failed. Check console.");
-      debugger;
     } finally {
       setIsLoading(false);
       location.reload();
@@ -110,7 +107,6 @@ export function Login() {
     } catch (e) {
       console.error("Registration failed", e);
       alert("Registration failed. Check console.");
-      debugger;
     } finally {
       setIsLoading(false);
       if (success) {
