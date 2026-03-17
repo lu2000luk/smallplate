@@ -98,8 +98,8 @@ export const serviceDefinitions: ServiceDefinition[] = [
   },
   {
     type: "kv",
-    label: "Key-Value",
-    description: "Fast key-value access for lightweight state.",
+    label: "KV",
+    description: "Fast key-value with flexible data models.",
     icon: HardDriveIcon,
   },
 ];

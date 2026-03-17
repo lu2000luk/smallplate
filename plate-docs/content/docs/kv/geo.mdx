@@ -1,0 +1,814 @@
+---
+title: Geo API
+description: Location storage and distance/area searches using geospatial queries
+---
+
+Geo endpoints store named locations and perform distance and area searches. Under the hood, Redis stores geospatial members in sorted sets.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/{plateId}/geo/add` | Add locations |
+| POST | `/{plateId}/geo/positions` | Get coordinates |
+| GET | `/{plateId}/geo/distance/{key}` | Get distance between members |
+| POST | `/{plateId}/geo/search` | `GEOSEARCH` |
+| POST | `/{plateId}/geo/search/store` | `GEOSEARCHSTORE` |
+| POST | `/{plateId}/geo/command` | Execute allowed geo commands |
+| POST | `/{plateId}/geo/{key}/command` | Execute key-specific geo commands |
+
+## Examples
+
+### Add locations
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-add">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/add`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "cities",
+        locations: [
+          { member: "San Francisco", longitude: -122.4194, latitude: 37.7749 },
+          { member: "Los Angeles", longitude: -118.2437, latitude: 34.0522 }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/add", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "cities",
+                "locations": [
+                    { "member": "San Francisco", "longitude": -122.4194, "latitude": 37.7749 },
+                    { "member": "Los Angeles", "longitude": -118.2437, "latitude": 34.0522 }
+                ]
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"key":"cities","locations":[{"member":"San Francisco","longitude":-122.4194,"latitude":37.7749},{"member":"Los Angeles","longitude":-118.2437,"latitude":34.0522}]}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/add", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/add" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "cities",
+        "locations": [
+          { "member": "San Francisco", "longitude": -122.4194, "latitude": 37.7749 },
+          { "member": "Los Angeles", "longitude": -118.2437, "latitude": 34.0522 }
+        ]
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Get positions
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-positions">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/positions`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "cities",
+        members: ["San Francisco", "Los Angeles"]
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/positions", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "cities",
+                "members": ["San Francisco", "Los Angeles"]
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"key":"cities","members":["San Francisco","Los Angeles"]}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/positions", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/positions" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "cities",
+        "members": ["San Francisco", "Los Angeles"]
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Get distance
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-distance">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/distance/cities?from=San%20Francisco&to=Los%20Angeles&unit=km`, {
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/geo/distance/cities?from=San%20Francisco&to=Los%20Angeles&unit=km", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"io"
+    	"net/http"
+    	"net/url"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	query := url.Values{}
+    	query.Add("from", "San Francisco")
+    	query.Add("to", "Los Angeles")
+    	query.Add("unit", "km")
+
+    	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/geo/distance/cities?%s", baseUrl, plateId, query.Encode()), nil)
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/geo/distance/cities?from=San%20Francisco&to=Los%20Angeles&unit=km" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Search by radius
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-search">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/search`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "cities",
+        from_member: "San Francisco",
+        radius: 600,
+        unit: "km",
+        with_dist: true,
+        sort: "asc"
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/search", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "cities",
+                "from_member": "San Francisco",
+                "radius": 600,
+                "unit": "km",
+                "with_dist": true,
+                "sort": "asc"
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"key":"cities","from_member":"San Francisco","radius":600,"unit":"km","with_dist":true,"sort":"asc"}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/search", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/search" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "cities",
+        "from_member": "San Francisco",
+        "radius": 600,
+        "unit": "km",
+        "with_dist": true,
+        "sort": "asc"
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Search by box and store the result
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-search-store">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/search/store`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "cities",
+        destination: "cities:west-coast",
+        from_lon: -122.4194,
+        from_lat: 37.7749,
+        width: 800,
+        height: 800,
+        unit: "km"
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/search/store", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "cities",
+                "destination": "cities:west-coast",
+                "from_lon": -122.4194,
+                "from_lat": 37.7749,
+                "width": 800,
+                "height": 800,
+                "unit": "km"
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"key":"cities","destination":"cities:west-coast","from_lon":-122.4194,"from_lat":37.7749,"width":800,"height":800,"unit":"km"}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/search/store", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/search/store" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "cities",
+        "destination": "cities:west-coast",
+        "from_lon": -122.4194,
+        "from_lat": 37.7749,
+        "width": 800,
+        "height": 800,
+        "unit": "km"
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Command Compatibility
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-command">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/command`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        command: "GEOADD",
+        args: ["cities", -122.4194, 37.7749, "San Francisco"]
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/command", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "command": "GEOADD",
+                "args": ["cities", -122.4194, 37.7749, "San Francisco"]
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"command":"GEOADD","args":["cities",-122.4194,37.7749,"San Francisco"]}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/command", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/command" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "command": "GEOADD",
+        "args": ["cities", -122.4194, 37.7749, "San Francisco"]
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Command Endpoints
+
+### `POST /{plateId}/geo/command`
+
+Execute allowed geo commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GEOADD | Add locations |
+| GEOPOS | Get coordinates |
+| GEODIST | Get distance |
+| GEOSEARCH | Search locations |
+| GEOSEARCHSTORE | Search and store results |
+
+**Query Parameters for GEODIST:**
+- `from` (required): First member
+- `to` (required): Second member
+- `unit` (optional): Distance unit - `m` (meters), `km` (kilometers), `mi` (miles), `ft` (feet). Default: `m`
+
+### `POST /{plateId}/geo/{key}/command`
+
+Execute allowed commands on a specific geo key.
+
+**Allowed Commands:** Same as above.
+
+**Request:**
+
+<CodeBlockTabs defaultValue="javascript" groupId="geo-key-command">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/geo/cities/command`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        command: "GEOPOS",
+        args: ["San Francisco"]
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/geo/cities/command", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "command": "GEOPOS",
+                "args": ["San Francisco"]
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := []byte(`{"command":"GEOPOS","args":["San Francisco"]}`)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/geo/cities/command", baseUrl, plateId), bytes.NewBuffer(payload))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/geo/cities/command" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "command": "GEOPOS",
+        "args": ["San Francisco"]
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>

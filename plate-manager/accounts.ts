@@ -1,3 +1,4 @@
+import { connectedServers } from "./index";
 import type { ServerTypes } from ".";
 import {
   createApiKey,
@@ -872,6 +873,18 @@ export function authRouter(
   req: Request,
   url: URL,
 ): Response | Promise<Response> {
+  if (url.pathname === "/services/url" && req.method === "GET") {
+    const id = url.searchParams.get("id");
+    if (!id) {
+      return jsonResponse({ success: false, message: "Missing id" }, 400);
+    }
+    const server = connectedServers[id];
+    if (!server) {
+      return jsonResponse({ success: false, message: "Server not found" }, 404);
+    }
+    return jsonResponse({ success: true, url: server.publicUrl }, 200);
+  }
+
   if (url.pathname === "/plates/get" && req.method === "GET") {
     return getPlateRoute(req, url);
   }

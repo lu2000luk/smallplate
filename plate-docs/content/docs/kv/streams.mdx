@@ -1,0 +1,1091 @@
+---
+title: Streams API
+description: Append-only logs with entry IDs for events, feeds, and audit trails
+---
+
+Streams are append-only logs with entry IDs and field-value payloads. They work well for events, feeds, message processing, and audit trails.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/[id]/streams/add` | Add an entry |
+| GET | `/[id]/streams/length/[key]` | Get stream length |
+| GET | `/[id]/streams/range/[key]` | Forward range |
+| GET | `/[id]/streams/reverse/[key]` | Reverse range |
+| POST | `/[id]/streams/read` | `XREAD` |
+| POST | `/[id]/streams/trim` | `XTRIM` |
+| POST | `/[id]/streams/delete` | `XDEL` |
+| GET | `/[id]/streams/info/[key]` | `XINFO` |
+| POST | `/[id]/streams/groups/create` | Create a consumer group |
+| POST | `/[id]/streams/groups/read` | `XREADGROUP` |
+| POST | `/[id]/streams/groups/ack` | `XACK` |
+| GET | `/[id]/streams/groups/pending/[key]/{group}` | `XPENDING` |
+| POST | `/[id]/streams/groups/claim` | `XCLAIM` |
+| POST | `/[id]/streams/groups/autoclaim` | `XAUTOCLAIM` |
+| POST | `/[id]/streams/command` | Execute allowed stream commands |
+| POST | `/[id]/streams/[key]/command` | Execute key-specific stream commands |
+
+## Add an Entry
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-add">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/add`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "events",
+        values: {
+          type: "signup",
+          user_id: 123
+        }
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/add", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "events",
+                "values": {
+                    "type": "signup",
+                    "user_id": 123
+                }
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"key": "events",
+    		"values": map[string]interface{}{
+    			"type":    "signup",
+    			"user_id": 123,
+    		},
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/add", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/add" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "events",
+        "values": {
+          "type": "signup",
+          "user_id": 123
+        }
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Get Stream Length
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-length">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/length/events`, {
+      method: "GET",
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/streams/length/events", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/streams/length/events", baseUrl, plateId), nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/streams/length/events" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Read a Range
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-range">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const params = new URLSearchParams({
+      start: "-",
+      end: "+",
+      count: "10"
+    });
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/range/events?${params}`, {
+      method: "GET",
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/streams/range/events?start=-&end=+&count=10", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"io"
+    	"net/http"
+    	"net/url"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	query := url.Values{}
+    	query.Set("start", "-")
+    	query.Set("end", "+")
+    	query.Set("count", "10")
+
+    	reqUrl := fmt.Sprintf("%s/%s/streams/range/events?%s", baseUrl, plateId, query.Encode())
+    	req, _ := http.NewRequest("GET", reqUrl, nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/streams/range/events?start=-&end=+&count=10" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Read from Multiple Streams
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-read-multi">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/read`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        streams: [
+          { key: "events", id: "$" },
+          { key: "audit", id: "$" }
+        ],
+        block_ms: 5000,
+        count: 25
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/read", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "streams": [
+                    { "key": "events", "id": "$" },
+                    { "key": "audit", "id": "$" }
+                ],
+                "block_ms": 5000,
+                "count": 25
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"streams": []map[string]interface{}{
+    			{"key": "events", "id": "$"},
+    			{"key": "audit", "id": "$"},
+    		},
+    		"block_ms": 5000,
+    		"count":    25,
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/read", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/read" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "streams": [
+          {"key": "events", "id": "$"},
+          {"key": "audit", "id": "$"}
+        ],
+        "block_ms": 5000,
+        "count": 25
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Trim by Max Length
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-trim">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/trim`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "events",
+        strategy: "maxlen",
+        threshold: 1000,
+        approximate: true
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/trim", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "events",
+                "strategy": "maxlen",
+                "threshold": 1000,
+                "approximate": true
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"key":         "events",
+    		"strategy":    "maxlen",
+    		"threshold":   1000,
+    		"approximate": true,
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/trim", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/trim" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "events",
+        "strategy": "maxlen",
+        "threshold": 1000,
+        "approximate": true
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Consumer Groups
+
+Consumer groups allow multiple consumers to process a stream as a team, with built-in tracking of unacknowledged messages.
+
+### Create a Group
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-group-create">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/groups/create`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        key: "events",
+        group: "workers",
+        id: "$",
+        mkstream: true
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/groups/create", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "key": "events",
+                "group": "workers",
+                "id": "$",
+                "mkstream": true
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"key":       "events",
+    		"group":     "workers",
+    		"id":        "$",
+    		"mkstream":  true,
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/groups/create", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/groups/create" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "events",
+        "group": "workers",
+        "id": "$",
+        "mkstream": true
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Read as a Consumer Group
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-group-read">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/groups/read`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        group: "workers",
+        consumer: "worker-1",
+        streams: [
+          { key: "events", id: ">" }
+        ],
+        count: 10
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/groups/read", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "group": "workers",
+                "consumer": "worker-1",
+                "streams": [
+                    { "key": "events", "id": ">" }
+                ],
+                "count": 10
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"group":    "workers",
+    		"consumer": "worker-1",
+    		"streams": []map[string]interface{}{
+    			{"key": "events", "id": ">"},
+    		},
+    		"count": 10,
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/groups/read", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/groups/read" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "group": "workers",
+        "consumer": "worker-1",
+        "streams": [
+          {"key": "events", "id": ">"}
+        ],
+        "count": 10
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Command Endpoints
+
+### POST /[id]/streams/command
+
+Execute allowed stream commands across the plate.
+
+#### Allowed Commands
+
+| Command | Description |
+|---------|-------------|
+| XADD | Add entry |
+| XLEN | Get length |
+| XRANGE | Forward range |
+| XREVRANGE | Reverse range |
+| XREAD | Read from streams |
+| XTRIM | Trim stream |
+| XDEL | Delete entries |
+| XINFO | Get stream info |
+| XGROUP | Manage groups |
+| XREADGROUP | Group read |
+| XACK | Acknowledge |
+| XPENDING | Pending entries |
+| XCLAIM | Claim messages |
+| XAUTOCLAIM | Auto claim |
+
+#### Execute Command
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-command">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/command`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        command: "XADD",
+        args: ["events", "*", "type", "signup"]
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/command", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "command": "XADD",
+                "args": ["events", "*", "type", "signup"]
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"command": "XADD",
+    		"args":    []string{"events", "*", "type", "signup"},
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/command", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/command" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "command": "XADD",
+        "args": ["events", "*", "type", "signup"]
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### POST /[id]/streams/[key]/command
+
+Execute allowed commands on a specific stream key.
+
+#### Allowed Commands
+
+Same as above.
+
+#### Execute Key-Specific Command
+
+<CodeBlockTabs defaultValue="javascript" groupId="streams-key-command">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/$[id]/streams/events/command`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        command: "XLEN"
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/streams/events/command", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "command": "XLEN"
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"command": "XLEN",
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/streams/events/command", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/streams/events/command" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"command": "XLEN"}'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>

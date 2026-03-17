@@ -1,0 +1,570 @@
+---
+title: Pub/Sub API
+description: Real-time message fan-out with Server-Sent Events and WebSockets
+---
+
+Pub/Sub provides real-time message fan-out. Publishers send messages to a channel, and subscribers receive them over Server-Sent Events or WebSockets.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/{plateId}/pubsub/{channel}/publish` | Publish a message |
+| GET | `/{plateId}/pubsub/{channel}/subscribe` | Subscribe with SSE |
+| GET | `/{plateId}/pubsub/{channel}/ws` | Subscribe with WebSocket |
+| POST | `/{plateId}/publish/{channel}` | Legacy publish alias |
+| GET | `/{plateId}/subscribe/{channel}` | Legacy SSE alias |
+| GET | `/{plateId}/ws/subscribe/{channel}` | Legacy WebSocket alias |
+
+## Publish Simple Message
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-publish-simple">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/pubsub/alerts/publish`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "Server restarted"
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/pubsub/alerts/publish", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "message": "Server restarted"
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"message": "Server restarted",
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/pubsub/alerts/publish", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/pubsub/alerts/publish" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"message": "Server restarted"}'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Publish Structured Object
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-publish-object">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/pubsub/user:123:events/publish`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          type: "login",
+          userId: "123",
+          timestamp: "2026-03-15T12:00:00Z"
+        }
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/pubsub/user:123:events/publish", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "message": {
+                    "type": "login",
+                    "userId": "123",
+                    "timestamp": "2026-03-15T12:00:00Z"
+                }
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"message": map[string]interface{}{
+    			"type":      "login",
+    			"userId":    "123",
+    			"timestamp": "2026-03-15T12:00:00Z",
+    		},
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/pubsub/user:123:events/publish", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/pubsub/user:123:events/publish" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"message": {"type": "login", "userId": "123", "timestamp": "2026-03-15T12:00:00Z"}}'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Subscribe with Server-Sent Events
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-subscribe-sse">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const eventSource = new EventSource(`${baseUrl}/${plateId}/pubsub/alerts/subscribe`, {
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received:", data);
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("Connection closed", error);
+      eventSource.close();
+    };
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use futures_util::stream::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/pubsub/alerts/subscribe", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let mut stream = response.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            match chunk {
+                Ok(bytes) => println!("{:?}", String::from_utf8_lossy(&bytes)),
+                Err(e) => eprintln!("Error: {}", e),
+            }
+        }
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bufio"
+    	"fmt"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/pubsub/alerts/subscribe", baseUrl, plateId), nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	scanner := bufio.NewScanner(resp.Body)
+    	for scanner.Scan() {
+    		line := scanner.Text()
+    		fmt.Println("Received:", line)
+    	}
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/pubsub/alerts/subscribe" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Subscribe with Pattern (SSE)
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-pattern">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const eventSource = new EventSource(
+      `${baseUrl}/${plateId}/pubsub/user:*/subscribe?pattern=true`,
+      {
+        headers: {
+          "Authorization": apiKey
+        }
+      }
+    );
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received:", data);
+    };
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use futures_util::stream::StreamExt;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/pubsub/user:*/subscribe?pattern=true", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let mut stream = response.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            match chunk {
+                Ok(bytes) => println!("{:?}", String::from_utf8_lossy(&bytes)),
+                Err(e) => eprintln!("Error: {}", e),
+            }
+        }
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bufio"
+    	"fmt"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/pubsub/user:*/subscribe?pattern=true", baseUrl, plateId), nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	scanner := bufio.NewScanner(resp.Body)
+    	for scanner.Scan() {
+    		line := scanner.Text()
+    		fmt.Println("Received:", line)
+    	}
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/pubsub/user:*/subscribe?pattern=true" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Subscribe with WebSocket
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-websocket">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]".replace("http", "ws");
+
+    const ws = new WebSocket(`${baseUrl}/${plateId}/pubsub/alerts/ws`);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ auth: apiKey }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received:", data);
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket closed");
+    };
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use tokio_tungstenite::{connect_async, tungstenite::Message};
+    use futures_util::{sink::SinkExt, stream::StreamExt};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]".replace("http", "ws");
+
+        let ws_url = format!("{}/{}/pubsub/alerts/ws", base_url, plate_id);
+        let (ws_stream, _) = connect_async(&ws_url).await?;
+        let (mut write, mut read) = ws_stream.split();
+
+        // Send auth
+        write
+            .send(Message::Text(format!(r#"{{"auth":"{}"}}"#, api_key)))
+            .await?;
+
+        // Receive messages
+        while let Some(msg) = read.next().await {
+            match msg? {
+                Message::Text(text) => println!("Received: {}", text),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"log"
+    	"strings"
+
+    	"github.com/gorilla/websocket"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	wsUrl := strings.Replace(baseUrl, "http", "ws", 1)
+    	wsUrl = fmt.Sprintf("%s/%s/pubsub/alerts/ws", wsUrl, plateId)
+
+    	ws, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
+    	if err != nil {
+    		log.Fatal(err)
+    	}
+    	defer ws.Close()
+
+    	// Send auth
+    	authMsg := fmt.Sprintf(`{"auth":"%s"}`, apiKey)
+    	ws.WriteMessage(websocket.TextMessage, []byte(authMsg))
+
+    	// Receive messages
+    	for {
+    		_, message, err := ws.ReadMessage()
+    		if err != nil {
+    			break
+    		}
+    		fmt.Printf("Received: %s\n", message)
+    	}
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    # WebSocket connections require a specialized client like websocat
+    websocat ws://[base-url]/[id]/pubsub/alerts/ws
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Notes
+
+- Published payloads are JSON-encoded.
+- Subscription payloads decode JSON when possible and fall back to plain strings.
+- Legacy publish/subscribe routes are still supported.

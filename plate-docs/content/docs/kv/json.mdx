@@ -1,0 +1,323 @@
+---
+title: JSON API
+description: Store and retrieve JSON objects natively without manual serialization
+---
+
+JSON endpoints make it easy to store structured JSON without manually serializing and deserializing at the client layer.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/{plateId}/json/{key}` | Get a JSON value |
+| POST | `/{plateId}/json/{key}` | Store a JSON value |
+| DELETE | `/{plateId}/json/{key}` | Delete a JSON value |
+
+## Store JSON
+
+<CodeBlockTabs defaultValue="javascript" groupId="json-store">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/json/user:1`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        value: {
+          name: "Ada",
+          age: 30,
+          active: true
+        },
+        ttl_ms: 3600000
+      })
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/json/user:1", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&json!({
+                "value": {
+                    "name": "Ada",
+                    "age": 30,
+                    "active": true
+                },
+                "ttl_ms": 3600000
+            }))
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	payload := map[string]interface{}{
+    		"value": map[string]interface{}{
+    			"name":   "Ada",
+    			"age":    30,
+    			"active": true,
+    		},
+    		"ttl_ms": 3600000,
+    	}
+
+    	jsonData, _ := json.Marshal(payload)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/json/user:1", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/json/user:1" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "value": {
+          "name": "Ada",
+          "age": 30,
+          "active": true
+        },
+        "ttl_ms": 3600000
+      }'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Read JSON
+
+<CodeBlockTabs defaultValue="javascript" groupId="json-read">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/json/user:1`, {
+      method: "GET",
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .get(&format!("{}/{}/json/user:1", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/json/user:1", baseUrl, plateId), nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/json/user:1" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Delete JSON
+
+<CodeBlockTabs defaultValue="javascript" groupId="json-delete">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/json/user:1`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .delete(&format!("{}/{}/json/user:1", base_url, plate_id))
+            .header("Authorization", api_key)
+            .send()
+            .await?;
+
+        let data = response.json::<serde_json::Value>().await?;
+        println!("{:?}", data);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/%s/json/user:1", baseUrl, plateId), nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X DELETE "[base-url]/[id]/json/user:1" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Notes
+
+- Values are stored as JSON-encoded strings internally.
+- `GET` returns the decoded JSON structure inside the standard envelope.

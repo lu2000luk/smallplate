@@ -1,0 +1,674 @@
+---
+title: Pipeline & Transaction API
+description: Batch execute multiple commands for improved performance
+---
+
+The Pipeline and Transaction API provides **batch execution** of multiple commands. This dramatically improves performance when you need to run many commands!
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/{plateId}/pipeline` | Execute multiple commands in pipeline |
+| POST | `/{plateId}/transaction` | Execute multiple commands in transaction |
+
+## Why Use Pipeline/Transaction?
+
+### The Problem
+
+Each HTTP request has network overhead. If you need to run 100 commands:
+- Naive: 100 HTTP requests = lots of waiting
+- Pipeline: 1 HTTP request with 100 commands = fast!
+
+### The Solution
+
+- **Pipeline**: Send multiple commands in one request, get all results at once
+- **Transaction**: Pipeline + atomic execution (all or nothing)
+
+## Pipeline - Batch Commands
+
+Execute multiple commands in sequence. If one fails, others still run!
+
+### Basic Pipeline Request
+
+<CodeBlockTabs defaultValue="javascript" groupId="pipeline-basic">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/pipeline`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        ["SET", "key1", "value1"],
+        ["GET", "key1"],
+        ["INCR", "counter"],
+        ["HGET", "user:1", "name"]
+      ])
+    });
+
+    const results = await response.json();
+    // results: ["OK", "value1", 1, "John"]
+    console.log(results);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/pipeline", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&vec![
+                vec!["SET", "key1", "value1"],
+                vec!["GET", "key1"],
+                vec!["INCR", "counter"],
+                vec!["HGET", "user:1", "name"],
+            ])
+            .send()
+            .await?;
+
+        let results = response.json::<serde_json::Value>().await?;
+        // results: ["OK", "value1", 1, "John"]
+        println!("{:?}", results);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	commands := [][]string{
+    		{"SET", "key1", "value1"},
+    		{"GET", "key1"},
+    		{"INCR", "counter"},
+    		{"HGET", "user:1", "name"},
+    	}
+
+    	jsonData, _ := json.Marshal(commands)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/pipeline", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/pipeline" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '[["SET","key1","value1"],["GET","key1"],["INCR","counter"],["HGET","user:1","name"]]'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Use Cases
+
+- **Bulk loading**: Import lots of data
+- **Batch reads**: Get many values at once
+- **Multiple writes**: Update many keys at once
+
+### Pipeline: Bulk Set and Get
+
+<CodeBlockTabs defaultValue="javascript" groupId="pipeline-bulk">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/pipeline`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        ["MSET", "key1", "val1", "key2", "val2", "key3", "val3"],
+        ["MGET", "key1", "key2", "key3"]
+      ])
+    });
+
+    const results = await response.json();
+    // results: ["OK", ["val1", "val2", "val3"]]
+    console.log(results);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/pipeline", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&vec![
+                vec!["MSET", "key1", "val1", "key2", "val2", "key3", "val3"],
+                vec!["MGET", "key1", "key2", "key3"],
+            ])
+            .send()
+            .await?;
+
+        let results = response.json::<serde_json::Value>().await?;
+        // results: ["OK", ["val1", "val2", "val3"]]
+        println!("{:?}", results);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	commands := [][]string{
+    		{"MSET", "key1", "val1", "key2", "val2", "key3", "val3"},
+    		{"MGET", "key1", "key2", "key3"},
+    	}
+
+    	jsonData, _ := json.Marshal(commands)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/pipeline", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/pipeline" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '[["MSET","key1","val1","key2","val2","key3","val3"],["MGET","key1","key2","key3"]]'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Pipeline: Multiple Data Types
+
+<CodeBlockTabs defaultValue="javascript" groupId="pipeline-types">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/pipeline`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        ["SET", "string:key", "value"],
+        ["HSET", "hash:key", "field", "value"],
+        ["SADD", "set:key", "member"],
+        ["ZADD", "zset:key", "100", "member"],
+        ["LPUSH", "list:key", "item"]
+      ])
+    });
+
+    const results = await response.json();
+    // results: [1, 1, 1, 1, 1]
+    console.log(results);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/pipeline", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&vec![
+                vec!["SET", "string:key", "value"],
+                vec!["HSET", "hash:key", "field", "value"],
+                vec!["SADD", "set:key", "member"],
+                vec!["ZADD", "zset:key", "100", "member"],
+                vec!["LPUSH", "list:key", "item"],
+            ])
+            .send()
+            .await?;
+
+        let results = response.json::<serde_json::Value>().await?;
+        // results: [1, 1, 1, 1, 1]
+        println!("{:?}", results);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	commands := [][]string{
+    		{"SET", "string:key", "value"},
+    		{"HSET", "hash:key", "field", "value"},
+    		{"SADD", "set:key", "member"},
+    		{"ZADD", "zset:key", "100", "member"},
+    		{"LPUSH", "list:key", "item"},
+    	}
+
+    	jsonData, _ := json.Marshal(commands)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/pipeline", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/pipeline" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '[["SET","string:key","value"],["HSET","hash:key","field","value"],["SADD","set:key","member"],["ZADD","zset:key","100","member"],["LPUSH","list:key","item"]]'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Transaction - Atomic Execution
+
+Execute multiple commands atomically. Either ALL succeed, or NONE are applied!
+
+### Basic Transaction Request
+
+<CodeBlockTabs defaultValue="javascript" groupId="transaction-basic">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/transaction`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        ["INCR", "balance"],
+        ["DECR", "debt"],
+        ["SET", "lastTransaction", "2024-01-01"]
+      ])
+    });
+
+    const results = await response.json();
+    // results: [100, 50, "OK"]
+    console.log(results);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/transaction", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&vec![
+                vec!["INCR", "balance"],
+                vec!["DECR", "debt"],
+                vec!["SET", "lastTransaction", "2024-01-01"],
+            ])
+            .send()
+            .await?;
+
+        let results = response.json::<serde_json::Value>().await?;
+        // results: [100, 50, "OK"]
+        println!("{:?}", results);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	commands := [][]string{
+    		{"INCR", "balance"},
+    		{"DECR", "debt"},
+    		{"SET", "lastTransaction", "2024-01-01"},
+    	}
+
+    	jsonData, _ := json.Marshal(commands)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/transaction", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/transaction" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '[["INCR","balance"],["DECR","debt"],["SET","lastTransaction","2024-01-01"]]'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Transaction: Account Transfer
+
+<CodeBlockTabs defaultValue="javascript" groupId="transaction-transfer">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="rust">Rust</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseUrl = "[base-url]";
+
+    const response = await fetch(`${baseUrl}/${plateId}/transaction`, {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        ["DECRBY", "account:a", "100"],
+        ["INCRBY", "account:b", "100"],
+        ["SET", "transfer:completed", "true"]
+      ])
+    });
+
+    const results = await response.json();
+    console.log(results);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    use reqwest::Client;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new();
+        let plate_id = "[id]";
+        let api_key = "your-api-key";
+        let base_url = "[base-url]";
+
+        let response = client
+            .post(&format!("{}/{}/transaction", base_url, plate_id))
+            .header("Authorization", api_key)
+            .json(&vec![
+                vec!["DECRBY", "account:a", "100"],
+                vec!["INCRBY", "account:b", "100"],
+                vec!["SET", "transfer:completed", "true"],
+            ])
+            .send()
+            .await?;
+
+        let results = response.json::<serde_json::Value>().await?;
+        println!("{:?}", results);
+        Ok(())
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+    	"bytes"
+    	"encoding/json"
+    	"fmt"
+    	"io"
+    	"net/http"
+    )
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseUrl := "[base-url]"
+
+    	commands := [][]string{
+    		{"DECRBY", "account:a", "100"},
+    		{"INCRBY", "account:b", "100"},
+    		{"SET", "transfer:completed", "true"},
+    	}
+
+    	jsonData, _ := json.Marshal(commands)
+    	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/%s/transaction", baseUrl, plateId), bytes.NewBuffer(jsonData))
+    	req.Header.Set("Authorization", apiKey)
+    	req.Header.Set("Content-Type", "application/json")
+
+    	client := &http.Client{}
+    	resp, _ := client.Do(req)
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	fmt.Println(string(body))
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/transaction" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '[["DECRBY","account:a","100"],["INCRBY","account:b","100"],["SET","transfer:completed","true"]]'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Pipeline vs Transaction
+
+| Feature | Pipeline | Transaction |
+|---------|----------|-------------|
+| Atomic | No | Yes |
+| Rollback on failure | No | Yes |
+| Performance gain | High | Medium |
+| Use case | Read-heavy bulk ops | Write-heavy atomic ops |
+
+## When to Use Each
+
+### Use Pipeline When:
+- Doing bulk operations
+- Performance is critical
+- Individual failures don't affect each other
+
+### Use Transaction When:
+- Need atomic operations
+- Dependent updates (if one fails, all should fail)
+- Financial operations, inventory, etc.
+
+## Error Handling
+
+### Pipeline Errors
+
+If a command fails, the response includes the error, but other commands still run:
+
+```javascript
+// Request
+[
+  ["SET", "key1", "value1"],
+  ["GET", "nonexistent"],
+  ["INCR", "notanumber"]
+]
+
+// Response
+[
+  "OK",
+  null,
+  {"error": "ERR value is not an integer or out of range"}
+]
+```
+
+### Transaction Errors
+
+If any command in a transaction fails, the entire transaction fails:
+
+```javascript
+// Request - if INCR fails, entire transaction is rolled back
+[
+  ["SET", "key1", "value1"],
+  ["INCR", "notanumber"]
+]
+
+// Response
+{"error": "EXECABORTED", "message": "..."}
+```
+
+## Best Practices
+
+1. **Batch size**: Don't send thousands of commands at once
+2. **Pipeline for reads**: Great for reducing latency on multiple reads
+3. **Transaction for writes**: Use when atomicity matters
+4. **Check results**: Always check response for errors

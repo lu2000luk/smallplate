@@ -1,0 +1,93 @@
+---
+title: PlateKV
+description: Complete REST API documentation for Plate-KV
+---
+
+Plate-KV is a Redis-compatible HTTP API server that provides REST-like access to key-value data operations. Each `[id]` is an isolated namespace, so multiple applications or environments can share one server without colliding keys.
+
+## Base URL
+
+```text
+[base-url]/[id]/...
+```
+
+All endpoints require a `[id]` path parameter.
+
+## Request Styles
+
+Plate-KV supports two API styles:
+
+- **Wrapper endpoints** are the preferred modern HTTP interface.
+- **Command endpoints** remain available for backward compatibility and advanced Redis-compatible access.
+
+### Wrapper Endpoints
+
+Wrapper endpoints use descriptive URLs and typed JSON bodies.
+
+Example:
+
+```json
+POST /[id]/hashes/set
+{
+  "key": "user:1",
+  "value": {
+    "name": "Ada",
+    "age": 30
+  }
+}
+```
+
+### Command Endpoints
+
+Command endpoints use a Redis-style request payload:
+
+```json
+{
+  "command": "SET",
+  "args": ["mykey", "hello world"]
+}
+```
+
+## Response Format
+
+Success responses use a consistent envelope:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "result": "OK"
+  }
+}
+```
+
+Error responses use:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_request",
+    "message": "human readable message"
+  }
+}
+```
+
+## API Categories
+
+| Category | Preferred Prefix | Description |
+| --- | --- | --- |
+| Keys | `/[id]/keys/` | Key inspection, delete, rename, copy, expiry, scan |
+| Strings | `/[id]/strings/` | String values, counters, ranges |
+| Hashes | `/[id]/hashes/` | Field-value storage |
+| Lists | `/[id]/lists/` | Ordered collections |
+| Sets | `/[id]/sets/` | Unique member collections |
+| Sorted Sets | `/[id]/zsets/` | Ranked collections |
+| Streams | `/[id]/streams/` | Append-only event data |
+| Bitmaps | `/[id]/bitmaps/` | Efficient bit storage |
+| Geo | `/[id]/geo/` | Geospatial storage and search |
+| JSON | `/[id]/json/` | Store and retrieve JSON values |
+| Pub/Sub | `/[id]/pubsub/` | Publish and subscribe |
+| Pipeline | `/[id]/pipeline` | Batch command execution |
+| Transaction | `/[id]/transaction` | Atomic transaction execution |
+| Info | `/[id]/info` | Plate statistics |

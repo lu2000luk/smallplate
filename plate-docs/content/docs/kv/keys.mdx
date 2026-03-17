@@ -1,0 +1,297 @@
+---
+title: Keys API
+description: Key inspection, deletion, expiry management, scanning, and manipulation
+---
+
+The Keys API handles inspection, scan operations, expiry, rename, copy, and deletion.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/{plateId}/keys/{key}` | Get metadata and string preview |
+| DELETE | `/{plateId}/keys/exact/{key}` | Delete one exact key |
+| POST | `/{plateId}/keys/delete` | Delete many exact keys |
+| POST | `/{plateId}/keys/ttl` | Set TTL in milliseconds |
+| DELETE | `/{plateId}/keys/ttl` | Remove TTL |
+| POST | `/{plateId}/keys/{key}/rename` | Rename a key |
+| POST | `/{plateId}/keys/{key}/copy` | Copy a key |
+| GET | `/{plateId}/scan` | Scan keys |
+| POST | `/{plateId}/keys/command` | Execute allowed key commands |
+
+## Inspection
+
+### Get Key Metadata
+
+```text
+GET /[id]/keys/mykey
+```
+
+This returns metadata such as:
+
+- `key`
+- `exists`
+- `type`
+- `ttl_ms`
+- `value` for string keys
+
+`ttl_ms` follows Redis `PTTL` semantics:
+
+- `-1` means the key exists but has no expiry.
+- `-2` means the key does not exist.
+
+<CodeBlockTabs defaultValue="javascript" groupId="request-method">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">
+      JavaScript
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="rust">
+      Rust
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="go">
+      Go
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="curl">
+      cURL
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const response = await fetch("[base-url]/[id]/keys/mykey", {
+      headers: { "Authorization": "YOUR_API_KEY" }
+    });
+    const data = await response.json();
+    console.log(data.data);
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    let response = client
+        .get("[base-url]/[id]/keys/mykey")
+        .header("Authorization", "YOUR_API_KEY")
+        .send()
+        .await?;
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    req, _ := http.NewRequest("GET", "[base-url]/[id]/keys/mykey", nil)
+    req.Header.Set("Authorization", "YOUR_API_KEY")
+    resp, _ := client.Do(req)
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/keys/mykey" \
+      -H "Authorization: YOUR_API_KEY"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Deletion
+
+### Exact Delete vs Pattern Delete
+
+Exact delete:
+
+```text
+DELETE /[id]/keys/exact/mykey
+```
+
+Delete many exact keys:
+
+```json
+POST /[id]/keys/delete
+{
+  "keys": ["key1", "key2"]
+}
+```
+
+<CodeBlockTabs defaultValue="javascript" groupId="request-method">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">
+      JavaScript
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="rust">
+      Rust
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="go">
+      Go
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="curl">
+      cURL
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const response = await fetch("[base-url]/[id]/keys/delete", {
+      method: "POST",
+      headers: { 
+        "Authorization": "YOUR_API_KEY",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ keys: ["key1", "key2"] })
+    });
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    let body = r#"{"keys":["key1","key2"]}"#;
+    let response = client
+        .post("[base-url]/[id]/keys/delete")
+        .header("Authorization", "YOUR_API_KEY")
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await?;
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    payload := []byte(`{"keys":["key1","key2"]}`)
+    req, _ := http.NewRequest("POST", "[base-url]/[id]/keys/delete", 
+        bytes.NewBuffer(payload))
+    req.Header.Set("Authorization", "YOUR_API_KEY")
+    req.Header.Set("Content-Type", "application/json")
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/keys/delete" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"keys":["key1","key2"]}'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Expiry Management
+
+### Set TTL (Time To Live)
+
+```json
+POST /[id]/keys/ttl
+{
+  "key": "mykey",
+  "ttl_ms": 60000
+}
+```
+
+<CodeBlockTabs defaultValue="javascript" groupId="request-method">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">
+      JavaScript
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="rust">
+      Rust
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="go">
+      Go
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="curl">
+      cURL
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const response = await fetch("[base-url]/[id]/keys/ttl", {
+      method: "POST",
+      headers: {
+        "Authorization": "YOUR_API_KEY",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ key: "mykey", ttl_ms: 60000 })
+    });
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="rust">
+    ```rust
+    let body = r#"{"key":"mykey","ttl_ms":60000}"#;
+    let response = client
+        .post("[base-url]/[id]/keys/ttl")
+        .header("Authorization", "YOUR_API_KEY")
+        .body(body)
+        .send()
+        .await?;
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    payload := []byte(`{"key":"mykey","ttl_ms":60000}`)
+    req, _ := http.NewRequest("POST", "[base-url]/[id]/keys/ttl",
+        bytes.NewBuffer(payload))
+    req.Header.Set("Authorization", "YOUR_API_KEY")
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X POST "[base-url]/[id]/keys/ttl" \
+      -H "Authorization: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"key":"mykey","ttl_ms":60000}'
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+## Scanning
+
+### Scan Keys
+
+```text
+GET /[id]/scan?cursor=0&count=100&match=user:*
+```
+
+### Scan with Type Filter
+
+Supported types: `string`, `list`, `set`, `zset`, `hash`, `stream`
+
+```text
+GET /[id]/scan?cursor=0&count=100&match=user:*&type=string
+```
+
+## Command Endpoints
+
+### POST /[id]/keys/command
+
+Execute allowed key commands across the plate.
+
+**Allowed Commands:**
+
+| Command | Description |
+|---------|-------------|
+| GET | Get value |
+| SET | Set value |
+| MGET | Get multiple values |
+| MSET | Set multiple values |
+| DEL | Delete keys |
+| UNLINK | Async delete keys |
+| EXISTS | Check key existence |
+| TYPE | Get key type |
+| RENAME | Rename key |
+| COPY | Copy key |
+| EXPIRE | Set expiry (seconds) |
+| PEXPIRE | Set expiry (milliseconds) |
+| TTL | Get TTL (seconds) |
+| PTTL | Get TTL (milliseconds) |
+| PERSIST | Remove expiry |

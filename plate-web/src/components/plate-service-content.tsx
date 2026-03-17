@@ -1,11 +1,11 @@
 "use client";
 
-import { ServerIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ServerIcon, CopyIcon, LinkIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { assertManagerUrl } from "@/lib/utils";
 import type { Plate, ServiceDefinition, ServiceType } from "./plate-dashboard";
 
 type ServiceContentProps = {
@@ -27,6 +27,11 @@ export function PlateServiceContent({
   onEnable,
   onDisable,
 }: ServiceContentProps) {
+  const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+  const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
   const isEnabled = (() => {
     const data =
       typeof plate.data === "object" && plate.data !== null ? plate.data : {};
@@ -48,6 +53,45 @@ export function PlateServiceContent({
     return typeof serverId === "string" && serverId.length > 0
       ? serverId
       : null;
+  };
+
+  const assignedServerId = getAssignedServerId();
+
+  useEffect(() => {
+    if (isEnabled && assignedServerId) {
+      const fetchUrl = async () => {
+        setIsLoadingUrl(true);
+        setUrlFetchError(null);
+        try {
+          const managerUrl = assertManagerUrl();
+          const response = await fetch(
+            `${managerUrl}/services/url?id=${assignedServerId}`
+          );
+          const data = await response.json();
+          if (data.success && typeof data.url === "string") {
+            setServerUrl(data.url);
+          } else {
+            setUrlFetchError(data.message || "Failed to fetch server URL.");
+          }
+        } catch (err) {
+          setUrlFetchError("Network error while fetching server URL.");
+        } finally {
+          setIsLoadingUrl(false);
+        }
+      };
+
+      fetchUrl();
+    } else {
+      setServerUrl(null);
+    }
+  }, [isEnabled, assignedServerId]);
+
+  const handleCopyUrl = () => {
+    if (serverUrl) {
+      navigator.clipboard.writeText(serverUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }
   };
 
   return (
@@ -72,9 +116,42 @@ export function PlateServiceContent({
               </div>
               <div className="inline-flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 font-mono text-sm">
                 <ServerIcon className="size-4" />
-                <span>{getAssignedServerId() ?? "No server assigned"}</span>
+                <span>{assignedServerId ?? "No server assigned"}</span>
               </div>
             </div>
+
+            {assignedServerId && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Server URL</div>
+                <div className="text-sm text-muted-foreground">
+                  The public connection URL for this server.
+                </div>
+                {isLoadingUrl ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner />
+                    <span className="text-sm text-muted-foreground">Loading URL...</span>
+                  </div>
+                ) : urlFetchError ? (
+                  <div className="text-sm text-destructive-foreground">
+                    {urlFetchError}
+                  </div>
+                ) : serverUrl ? (
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 font-mono text-sm break-all">
+                      <LinkIcon className="size-4" />
+                      <span>{serverUrl}</span>
+                    </div>
+                    <Button variant="outline" size="icon" onClick={handleCopyUrl} title="Copy URL">
+                      <CopyIcon className="size-4" />
+                      <span className="sr-only">Copy URL</span>
+                    </Button>
+                    {copiedUrl && <span className="text-xs text-success font-medium">Copied!</span>}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No URL available</div>
+                )}
+              </div>
+            )}
 
             <div className="pt-4">
               <Button

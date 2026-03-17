@@ -38,11 +38,13 @@ export type ServerWSData = {
   type: ServerTypes;
   latency: number;
   id: string;
+  publicUrl: string;
 };
 export type ConnectedServer = {
   type: ServerTypes;
   socket: ServerWebSocket<ServerWSData>;
   latency: number;
+  publicUrl: string;
 };
 
 const server = Bun.serve({
@@ -111,12 +113,15 @@ const server = Bun.serve({
         return new Response("Missing service id", { status: 400 });
       }
 
+      const publicUrl = url.searchParams.get("u") || "";
+
       if (
         server.upgrade(req, {
           data: {
             type: type as ServerTypes,
             latency: 100,
             id,
+            publicUrl,
           },
         })
       ) {
@@ -134,14 +139,15 @@ const server = Bun.serve({
   websocket: {
     data: {} as ServerWSData,
     open(ws) {
-      const { type, id } = ws.data;
+      const { type, id, publicUrl } = ws.data;
       ws.subscribe(type);
       connectedServers[id] = {
         type,
         socket: ws,
         latency: ws.data.latency,
+        publicUrl,
       };
-      log("New server connected:", type, id);
+      log("New server connected:", type, id, "Public URL:", publicUrl);
 
       startPingLoop(ws);
     },

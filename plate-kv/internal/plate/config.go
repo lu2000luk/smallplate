@@ -16,6 +16,7 @@ type Config struct {
 	ServiceID        string
 	ServiceKey       string
 	ManagerURL       string
+	PublicURL        string
 	HTTPAddr         string
 	AuthCacheSize    int
 	RedisOpTimeout   time.Duration
@@ -34,7 +35,8 @@ func LoadConfig() (Config, error) {
 		ServiceID:        strings.TrimSpace(os.Getenv("SERVICE_ID")),
 		ServiceKey:       strings.TrimSpace(os.Getenv("SERVICE_KEY")),
 		ManagerURL:       strings.TrimSpace(os.Getenv("MANAGER_URL")),
-		HTTPAddr:         envString("HTTP_ADDR", ":8080"),
+		PublicURL:        strings.TrimSpace(os.Getenv("PUBLIC_URL")),
+		HTTPAddr:         envString("HTTP_ADDR", ":3400"),
 		AuthCacheSize:    envInt("AUTH_CACHE_SIZE", 1000),
 		RedisOpTimeout:   envDuration("REDIS_OP_TIMEOUT", 5*time.Second),
 		ShutdownTimeout:  envDuration("SHUTDOWN_TIMEOUT", 15*time.Second),
@@ -96,6 +98,9 @@ func (c Config) ManagerWSURL() (string, string, error) {
 		"id": []string{c.ServiceID},
 		"t":  []string{ServiceType},
 		"k":  []string{c.ServiceKey},
+	}
+	if c.PublicURL != "" {
+		values.Set("u", c.PublicURL)
 	}
 	u.RawQuery = values.Encode()
 
