@@ -4,10 +4,8 @@ import { CopyIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import type { PlateApiKey } from "./plate-dashboard";
-import { maskApiKey } from "@/lib/utils";
 
 type PlateApiKeysProps = {
   apiKeys: PlateApiKey[];
