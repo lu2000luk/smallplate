@@ -17,7 +17,8 @@ if not exist "%TEMP_DIR%" (
   mkdir "%TEMP_DIR%"
 )
 
-wsl bash -lc "cd \"$(wslpath '%PROJECT_DIR%')\" && VALKEY_PORT=%PORT% bash ./scripts/run_valkey_linux.sh"
+
+wsl bash -lc "cd \"$(wslpath '%PROJECT_DIR%')\" && sed -i 's/\r$//' ./scripts/run_valkey_linux.sh && VALKEY_PORT=%PORT% bash ./scripts/run_valkey_linux.sh"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if "%EXIT_CODE%"=="0" (
