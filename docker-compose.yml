@@ -2,6 +2,7 @@
 # 1) Optional: create a .env file at repo root with SERVICE_KEY and other overrides.
 # 2) Build and start: docker compose up --build
 # 3) Stop: docker compose down
+# 4) Optional: set PLATE_DISABLE_WEB=1 to skip starting plate-web.
 
 services:
   plate-manager:
@@ -181,6 +182,16 @@ services:
       PORT: "3000"
       NEXT_PUBLIC_MANAGER_URL: "${NEXT_PUBLIC_MANAGER_URL:-http://localhost:3200}"
       NEXT_PUBLIC_DOCS_URL: "${NEXT_PUBLIC_DOCS_URL:-http://localhost:3001/docs}"
+      PLATE_DISABLE_WEB: "${PLATE_DISABLE_WEB:-0}"
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        if [ "$PLATE_DISABLE_WEB" = "1" ]; then
+          echo "PLATE_DISABLE_WEB=1, skipping plate-web startup"
+          exit 0
+        fi
+        exec bun run start -- -p 3000 -H 0.0.0.0
     ports:
       - "3000:3000"
     healthcheck:
@@ -190,4 +201,4 @@ services:
       timeout: 5s
       retries: 15
       start_period: 20s
-    restart: unless-stopped
+    restart: "no"
