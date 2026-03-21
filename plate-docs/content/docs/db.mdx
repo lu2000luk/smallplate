@@ -1,0 +1,305 @@
+---
+title: DB
+description: SQLite-over-HTTP API for Smallplate
+---
+
+PlateDB is a SQLite-over-HTTP service for Smallplate. Every `id` is an isolated database file (`data/{id}.db`) managed by the DB service.
+
+## Base URL
+
+```text
+[base-url]/[id]/...
+```
+
+All DB API endpoints are scoped by `[id]`.
+
+## Authentication
+
+All endpoints under `/{id}/...` require an API key in the `Authorization` header.
+
+```text
+Authorization: YOUR_API_KEY
+```
+
+Missing or invalid authorization returns `401`.
+
+## Response Format
+
+Success responses use the same envelope as other Plate services:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "any": "payload"
+  }
+}
+```
+
+Error responses:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_request",
+    "message": "human readable message"
+  }
+}
+```
+
+## Endpoint Groups
+
+| Group | Endpoints | Purpose |
+| --- | --- | --- |
+| Lifecycle | `POST /{id}`, `GET /{id}/info` | Create and inspect DB |
+| Core SQL | `POST /{id}/query`, `POST /{id}/execute`, `POST /{id}/batch` | Read, write, and batch statements |
+| Transactions | `POST /{id}/transactions/...` | Interactive transaction sessions |
+| Schema | `GET /{id}/tables`, `GET /{id}/tables/{table}`, `GET /{id}/tables/{table}/indexes`, `GET /{id}/schema` | Introspection |
+| Import/Export | `GET /{id}/export`, `POST /{id}/import`, `POST /{id}/import/sql` | Backup and restore |
+| Health | `GET /health` | Service health |
+
+## Lifecycle API
+
+### Create or initialize DB
+
+```text
+POST /[id]
+```
+
+Response data:
+
+```json
+{
+  "id": "mydb",
+  "created": true
+}
+```
+
+### Get DB info
+
+```text
+GET /[id]/info
+```
+
+Response data:
+
+```json
+{
+  "id": "mydb",
+  "createdAt": "2026-03-21T20:10:01.112Z",
+  "size_bytes": 8192,
+  "tableCount": 2
+}
+```
+
+## Core SQL API
+
+### Query (read statements)
+
+```text
+POST /[id]/query
+```
+
+Request:
+
+```json
+{
+  "sql": "SELECT id, name FROM users WHERE id > ?",
+  "params": [10]
+}
+```
+
+Response data:
+
+```json
+{
+  "columns": ["id", "name"],
+  "rows": [[11, "Ada"], [12, "Lin"]],
+  "rowCount": 2,
+  "time_ms": 0.7
+}
+```
+
+### Execute (write statements)
+
+```text
+POST /[id]/execute
+```
+
+Request:
+
+```json
+{
+  "sql": "INSERT INTO users (name) VALUES (?)",
+  "params": ["Ada"]
+}
+```
+
+Response data:
+
+```json
+{
+  "rowsAffected": 1,
+  "lastInsertRowid": 1,
+  "time_ms": 0.4
+}
+```
+
+### Batch
+
+```text
+POST /[id]/batch
+```
+
+Request:
+
+```json
+{
+  "transaction": true,
+  "statements": [
+    { "sql": "INSERT INTO inventory (sku, qty) VALUES (?, ?)", "params": ["A1", 10] },
+    { "sql": "UPDATE inventory SET qty = qty - 1 WHERE sku = ?", "params": ["A1"] }
+  ]
+}
+```
+
+Notes:
+
+- `transaction` defaults to `true`.
+- If `transaction=true`, statements execute atomically.
+- Each statement returns either a `query` or `execute` result.
+
+## Interactive Transactions
+
+Use this only when your app needs conditional logic between statements.
+
+### Begin
+
+```text
+POST /[id]/transactions
+```
+
+Response data:
+
+```json
+{
+  "txnId": "txn_1742599999999a1b2",
+  "expiresAt": "2026-03-21T20:11:20.045Z"
+}
+```
+
+### Run inside transaction
+
+- `POST /[id]/transactions/{txnId}/query`
+- `POST /[id]/transactions/{txnId}/execute`
+
+Request shape is the same as `/query` and `/execute`.
+
+### Finish transaction
+
+- `POST /[id]/transactions/{txnId}/commit`
+- `POST /[id]/transactions/{txnId}/rollback`
+
+## Schema Introspection
+
+### List tables
+
+```text
+GET /[id]/tables
+```
+
+### Get table details
+
+```text
+GET /[id]/tables/{table}
+```
+
+Includes:
+
+- table name
+- columns (`name`, `type`, `primaryKey`, `nullable`, `default`)
+- foreign keys
+- row count
+- create SQL
+
+### List table indexes
+
+```text
+GET /[id]/tables/{table}/indexes
+```
+
+### Get schema SQL
+
+```text
+GET /[id]/schema
+```
+
+Returns joined SQL DDL statements.
+
+## Import / Export
+
+### Export
+
+```text
+GET /[id]/export?format=sqlite
+GET /[id]/export?format=sql
+```
+
+- `format=sqlite` downloads the raw `.db` file.
+- `format=sql` downloads schema SQL.
+
+### Import
+
+```text
+POST /[id]/import
+POST /[id]/import/sql
+```
+
+- `POST /import` uploads a full SQLite database file (replace behavior).
+- `POST /import/sql` applies SQL text to current DB.
+
+## Quick Examples
+
+### cURL
+
+```bash
+# create db
+curl -X POST "[base-url]/[id]" \
+  -H "Authorization: YOUR_API_KEY"
+
+# execute write
+curl -X POST "[base-url]/[id]/execute" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)","params":[]}'
+
+# query
+curl -X POST "[base-url]/[id]/query" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"SELECT name FROM sqlite_master WHERE type=?","params":["table"]}'
+```
+
+### JavaScript
+
+```javascript
+const baseUrl = "[base-url]";
+const id = "[id]";
+const apiKey = "YOUR_API_KEY";
+
+const executeRes = await fetch(`${baseUrl}/${id}/execute`, {
+  method: "POST",
+  headers: {
+    "Authorization": apiKey,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    sql: "INSERT INTO users (name) VALUES (?)",
+    params: ["Ada"]
+  })
+});
+
+const executeBody = await executeRes.json();
+console.log(executeBody);
+```
