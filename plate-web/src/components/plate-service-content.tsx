@@ -11,6 +11,14 @@ import {
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPopup,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { assertManagerUrl, type ServiceType } from "@/lib/utils";
 import type { Plate, ServiceDefinition } from "./plate-dashboard";
@@ -40,6 +48,7 @@ export function PlateServiceContent({
   const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [isServerOnline, setIsServerOnline] = useState(false);
+  const [isDisableDialogOpen, setIsDisableDialogOpen] = useState(false);
 
   const isEnabled = (() => {
     const data =
@@ -206,11 +215,49 @@ export function PlateServiceContent({
               )}
               <Button
                 variant="destructive-outline"
-                onClick={onDisable}
+                onClick={() => setIsDisableDialogOpen(true)}
                 disabled={isPending}
               >
                 {isPending ? <Spinner /> : "Disable"}
               </Button>
+
+              <Dialog
+                open={isDisableDialogOpen}
+                onOpenChange={(open) => {
+                  if (!isPending) {
+                    setIsDisableDialogOpen(open);
+                  }
+                }}
+              >
+                <DialogPopup>
+                  <DialogHeader>
+                    <DialogTitle>Disable {serviceDefinition.label}?</DialogTitle>
+                    <DialogDescription>
+                      This will turn off the service for this plate. You can
+                      enable it again later.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDisableDialogOpen(false)}
+                      disabled={isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        onDisable();
+                        setIsDisableDialogOpen(false);
+                      }}
+                      disabled={isPending}
+                    >
+                      {isPending ? <Spinner /> : "Disable"}
+                    </Button>
+                  </DialogFooter>
+                </DialogPopup>
+              </Dialog>
             </div>
           </div>
         </div>
