@@ -1,4 +1,4 @@
-import { connectedServers } from "./index";
+import { connectedServers, isServerType } from "./index";
 import type { ServerTypes } from ".";
 import {
   createApiKey,
@@ -124,7 +124,7 @@ function parsePositiveInteger(value: unknown): number | null {
 }
 
 function parseServiceType(value: unknown): ServerTypes | null {
-  if (value === "db" || value === "kv") {
+  if (isServerType(value)) {
     return value;
   }
 
@@ -171,12 +171,10 @@ function parsePlateServersObject(value: string | null): PlateServersObject {
   const parsed = parseObjectRecord<Record<string, unknown>>(value);
   const servers: PlateServersObject = {};
 
-  if (typeof parsed.db === "string") {
-    servers.db = parsed.db;
-  }
-
-  if (typeof parsed.kv === "string") {
-    servers.kv = parsed.kv;
+  for (const [serviceType, serverId] of Object.entries(parsed)) {
+    if (isServerType(serviceType) && typeof serverId === "string") {
+      servers[serviceType] = serverId;
+    }
   }
 
   return servers;

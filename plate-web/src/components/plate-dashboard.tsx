@@ -6,7 +6,9 @@ import {
   DatabaseIcon,
   HardDriveIcon,
   KeyRoundIcon,
+  Link2,
   SettingsIcon,
+  Waypoints,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -26,14 +28,18 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
-import { assertManagerUrl, authenticatedFetch } from "@/lib/utils";
+import {
+  assertManagerUrl,
+  authenticatedFetch,
+  isServiceType,
+  type ServiceType,
+} from "@/lib/utils";
 import { PlateApiKeys } from "./plate-api-keys";
 import { PlateServiceContent } from "./plate-service-content";
 import { PlateSettings } from "./plate-settings";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export type ServiceType = "db" | "kv";
 export type DashboardSection = ServiceType | "api-keys" | "settings";
 
 export type Plate = {
@@ -102,6 +108,18 @@ export const serviceDefinitions: ServiceDefinition[] = [
     description: "Fast key-value with flexible data models.",
     icon: HardDriveIcon,
   },
+  {
+    type: "vec",
+    label: "Vector",
+    description: "Semantic vectors and similarity-powered retrieval.",
+    icon: Waypoints,
+  },
+  {
+    type: "link",
+    label: "Short Links",
+    description: "Create and route short links programmatically.",
+    icon: Link2,
+  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -116,8 +134,8 @@ function getEnabledServices(plate: Plate): ServiceType[] {
     return [];
   }
 
-  return services.filter(
-    (service): service is ServiceType => service === "db" || service === "kv",
+  return services.filter((service): service is ServiceType =>
+    isServiceType(service),
   );
 }
 
@@ -406,8 +424,7 @@ export function PlateDashboard({ plateId }: { plateId: number }) {
     }
   };
 
-  const activeService =
-    activeSection === "db" || activeSection === "kv" ? activeSection : null;
+  const activeService = isServiceType(activeSection) ? activeSection : null;
 
   const serviceContent =
     plate && activeService

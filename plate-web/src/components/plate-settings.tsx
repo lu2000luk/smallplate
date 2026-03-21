@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { isServiceType, type ServiceType } from "@/lib/utils";
 import type { Plate, ServiceDefinition } from "./plate-dashboard";
 
 type PlateSettingsProps = {
@@ -16,7 +17,7 @@ type PlateSettingsProps = {
   onDeletePlate: () => void;
 };
 
-function getEnabledServices(plate: Plate): string[] {
+function getEnabledServices(plate: Plate): ServiceType[] {
   const data =
     typeof plate.data === "object" && plate.data !== null ? plate.data : {};
   const services = data.enabled_services;
@@ -25,8 +26,8 @@ function getEnabledServices(plate: Plate): string[] {
     return [];
   }
 
-  return services.filter(
-    (service): service is string => service === "db" || service === "kv",
+  return services.filter((service): service is ServiceType =>
+    isServiceType(service),
   );
 }
 

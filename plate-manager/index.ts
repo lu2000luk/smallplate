@@ -33,7 +33,11 @@ log("Database initialized successfully.");
 
 log("Serving web server...");
 
-export type ServerTypes = "db" | "kv";
+export const SERVICE_TYPES = ["db", "kv", "vec", "link"] as const;
+export type ServerTypes = (typeof SERVICE_TYPES)[number];
+export function isServerType(value: unknown): value is ServerTypes {
+  return typeof value === "string" && SERVICE_TYPES.includes(value as ServerTypes);
+}
 export type ServerWSData = {
   type: ServerTypes;
   latency: number;
@@ -93,9 +97,7 @@ const server = Bun.serve({
     if (url.pathname.startsWith("/__service")) {
       const type = url.searchParams.get("t") || "";
       const id = url.searchParams.get("id") || "";
-      const validTypes = ["db", "kv"];
-
-      if (!validTypes.includes(type)) {
+      if (!isServerType(type)) {
         return new Response("Invalid service type", { status: 400 });
       }
 
@@ -118,7 +120,7 @@ const server = Bun.serve({
       if (
         server.upgrade(req, {
           data: {
-            type: type as ServerTypes,
+            type,
             latency: 100,
             id,
             publicUrl,

@@ -1,4 +1,4 @@
-import { db, type ServerTypes } from ".";
+import { db, isServerType, type ServerTypes } from ".";
 import { connectedServers } from "./index";
 
 export type PlateRecord = {
@@ -195,7 +195,7 @@ export function getPlateServers(plateId: number): PlateServersObject | null {
   const servers: PlateServersObject = {};
 
   for (const [key, value] of Object.entries(parsed)) {
-    if ((key === "db" || key === "kv") && typeof value === "string") {
+    if (isServerType(key) && typeof value === "string") {
       servers[key] = value;
     }
   }
@@ -237,18 +237,18 @@ export function plateBelongsToUser(plateId: number, userId: number): boolean {
 
 export function listConnectedServersForPlate(plateId: number): Array<{
   id: string;
-  type: "db" | "kv";
+  type: ServerTypes;
   latency: number;
 }> {
   const serverMap = getPlateServers(plateId) ?? {};
   const connectedPlateServers: Array<{
     id: string;
-    type: "db" | "kv";
+    type: ServerTypes;
     latency: number;
   }> = [];
 
   for (const [type, serverId] of Object.entries(serverMap)) {
-    if ((type !== "db" && type !== "kv") || typeof serverId !== "string") {
+    if (!isServerType(type) || typeof serverId !== "string") {
       continue;
     }
 

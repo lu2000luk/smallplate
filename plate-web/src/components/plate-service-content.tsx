@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
-  ServerIcon,
-  CopyIcon,
-  LinkIcon,
-  Link,
-  ExternalLink,
   Check,
+  CopyIcon,
+  ExternalLink,
+  Link,
+  LinkIcon,
+  ServerIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { assertManagerUrl } from "@/lib/utils";
-import type { Plate, ServiceDefinition, ServiceType } from "./plate-dashboard";
+import { assertManagerUrl, type ServiceType } from "@/lib/utils";
+import type { Plate, ServiceDefinition } from "./plate-dashboard";
 import { Input } from "./ui/input";
 
 type ServiceContentProps = {
@@ -39,6 +39,7 @@ export function PlateServiceContent({
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isServerOnline, setIsServerOnline] = useState(false);
 
   const isEnabled = (() => {
     const data =
@@ -78,11 +79,14 @@ export function PlateServiceContent({
           const data = await response.json();
           if (data.success && typeof data.url === "string") {
             setServerUrl(data.url);
+            setIsServerOnline(true);
           } else {
             setUrlFetchError(data.message || "Failed to fetch server URL.");
+            setIsServerOnline(false);
           }
         } catch (err) {
           setUrlFetchError("Network error while fetching server URL.");
+          setIsServerOnline(false);
         } finally {
           setIsLoadingUrl(false);
         }
@@ -91,6 +95,7 @@ export function PlateServiceContent({
       fetchUrl();
     } else {
       setServerUrl(null);
+      setIsServerOnline(false);
     }
   }, [isEnabled, assignedServerId]);
 
@@ -123,8 +128,11 @@ export function PlateServiceContent({
               <div className="flex items-center gap-2">
                 <Button variant="outline" title="Server">
                   <ServerIcon className="size-4" />
-                  <Badge variant="success" className="ml-auto">
-                    Online
+                  <Badge
+                    variant={isServerOnline ? "success" : "error"}
+                    className="ml-auto"
+                  >
+                    {isServerOnline ? "Online" : "Offline"}
                   </Badge>
                 </Button>
                 <Input
@@ -144,8 +152,8 @@ export function PlateServiceContent({
                       </span>
                     </div>
                   ) : urlFetchError ? (
-                    <div className="text-sm text-destructive-foreground">
-                      {urlFetchError}
+                    <div className="text-sm text-destructive-foreground font-mono">
+                      Error: {urlFetchError}
                     </div>
                   ) : serverUrl ? (
                     <div className="flex items-center gap-2">
@@ -167,9 +175,7 @@ export function PlateServiceContent({
                         onClick={handleCopyUrl}
                         title="Copy URL"
                       >
-                        {copiedUrl && (
-                          <Check className="size-4" />
-                        )}
+                        {copiedUrl && <Check className="size-4" />}
 
                         {!copiedUrl && <CopyIcon className="size-4" />}
 

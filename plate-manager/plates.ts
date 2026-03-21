@@ -1,4 +1,4 @@
-import { connectedServers, type ServerTypes } from ".";
+import { connectedServers, isServerType, type ServerTypes } from ".";
 import {
   getApiKeyRecord,
   getPlateById,
@@ -99,7 +99,7 @@ function getPendingKey(
 }
 
 function isServiceType(value: unknown): value is ServerTypes {
-  return value === "db" || value === "kv";
+  return isServerType(value);
 }
 
 function parseEnabledServices(data: unknown): ServerTypes[] {

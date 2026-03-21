@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { assertManagerUrl, authenticatedFetch } from "@/lib/utils";
+import {
+  assertManagerUrl,
+  authenticatedFetch,
+  isServiceType,
+} from "@/lib/utils";
 
 type Plate = {
   id: number;
@@ -52,8 +56,7 @@ function getEnabledServicesCount(plate: Plate): number {
     return 0;
   }
 
-  return services.filter((service) => service === "db" || service === "kv")
-    .length;
+  return services.filter((service) => isServiceType(service)).length;
 }
 
 function getErrorMessage(body: unknown, fallback: string): string {
