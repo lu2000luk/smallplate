@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+dump.rdb
+temp
+tmp
+scripts
+dist
+Dockerfile*

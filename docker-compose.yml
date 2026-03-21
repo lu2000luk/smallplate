@@ -1,0 +1,193 @@
+# Docker usage:
+# 1) Optional: create a .env file at repo root with SERVICE_KEY and other overrides.
+# 2) Build and start: docker compose up --build
+# 3) Stop: docker compose down
+
+services:
+  plate-manager:
+    build:
+      context: ./plate-manager
+      dockerfile: Dockerfile
+    container_name: plate-manager
+    environment:
+      PORT: "3200"
+      SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
+    ports:
+      - "3200:3200"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:3200/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ./smallplate-data/plate-manager:/app/data
+    restart: unless-stopped
+
+  plate-db:
+    build:
+      context: ./plate-db
+      dockerfile: Dockerfile
+    container_name: plate-db
+    depends_on:
+      plate-manager:
+        condition: service_healthy
+    environment:
+      SERVICE_ID: "db_main"
+      SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
+      MANAGER_URL: "plate-manager:3200"
+      PUBLIC_URL: "localhost:3500"
+      HTTP_ADDR: ":3500"
+      DATA_DIR: "/data"
+    ports:
+      - "3500:3500"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3500/healthz >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ./smallplate-data/plate-db:/data
+    restart: unless-stopped
+
+  kv-redis:
+    image: valkey/valkey:8-alpine
+    container_name: kv-redis
+    command: ["valkey-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -p 6379 ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - ./smallplate-data/kv-valkey:/data
+    restart: unless-stopped
+
+  plate-kv:
+    build:
+      context: ./plate-kv
+      dockerfile: Dockerfile
+    container_name: plate-kv
+    depends_on:
+      plate-manager:
+        condition: service_healthy
+      kv-redis:
+        condition: service_healthy
+    environment:
+      SERVICE_ID: "kv_main"
+      SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
+      MANAGER_URL: "plate-manager:3200"
+      PUBLIC_URL: "localhost:3400"
+      HTTP_ADDR: ":3400"
+      DB_URL: "redis://kv-redis:6379"
+    ports:
+      - "3400:3400"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3400/healthz >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  link-redis:
+    image: valkey/valkey:8-alpine
+    container_name: link-redis
+    command: ["valkey-server", "--appendonly", "yes", "--port", "6378"]
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -p 6378 ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - ./smallplate-data/link-valkey:/data
+    restart: unless-stopped
+
+  plate-link:
+    build:
+      context: ./plate-link
+      dockerfile: Dockerfile
+    container_name: plate-link
+    depends_on:
+      plate-manager:
+        condition: service_healthy
+      link-redis:
+        condition: service_healthy
+    environment:
+      SERVICE_ID: "link_main"
+      SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
+      MANAGER_URL: "plate-manager:3200"
+      PUBLIC_URL: "localhost:3600"
+      HTTP_ADDR: ":3600"
+      DB_URL: "redis://link-redis:6378"
+    ports:
+      - "3600:3600"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3600/healthz >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  plate-docs:
+    build:
+      context: ./plate-docs
+      dockerfile: Dockerfile
+    container_name: plate-docs
+    environment:
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  plate-web:
+    build:
+      context: ./plate-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_MANAGER_URL: "${NEXT_PUBLIC_MANAGER_URL:-http://localhost:3200}"
+        NEXT_PUBLIC_DOCS_URL: "${NEXT_PUBLIC_DOCS_URL:-http://localhost:3001/docs}"
+    container_name: plate-web
+    depends_on:
+      plate-manager:
+        condition: service_healthy
+      plate-docs:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      NEXT_PUBLIC_MANAGER_URL: "${NEXT_PUBLIC_MANAGER_URL:-http://localhost:3200}"
+      NEXT_PUBLIC_DOCS_URL: "${NEXT_PUBLIC_DOCS_URL:-http://localhost:3001/docs}"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
