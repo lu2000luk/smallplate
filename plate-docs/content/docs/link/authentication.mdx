@@ -1,0 +1,56 @@
+---
+title: Authentication
+description: Authenticate with Plate-Link management APIs
+---
+
+Plate-Link has two endpoint categories:
+
+- Management endpoints require authentication.
+- Public resolve/redirect endpoints do not.
+
+## Required Header (management only)
+
+```text
+Authorization: YOUR_API_KEY
+```
+
+## Authenticated endpoints
+
+- `POST /{plateId}/create`
+- `POST /{plateId}/create/dynamic`
+- `GET /{plateId}/links`
+- `GET /{plateId}/links/{id}`
+- `POST /{plateId}/links/{id}/update`
+- `POST /{plateId}/links/{id}/metadata`
+- `DELETE /{plateId}/links/{id}`
+
+## Public endpoints
+
+- `GET /{plateId}/resolve/{id}`
+- `GET /{plateId}/resolve/{id}/{tail...}`
+- `GET /url/{id}`
+- `GET /url/{id}/{tail...}`
+
+## 401 responses
+
+Missing or invalid authorization returns `401`:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "missing_authorization",
+    "message": "authorization header is required"
+  }
+}
+```
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_authorization",
+    "message": "authorization denied"
+  }
+}
+```

@@ -1,0 +1,66 @@
+---
+title: Link Management
+description: List, inspect, update, and delete links
+---
+
+## List links
+
+```text
+GET /{plateId}/links
+```
+
+Returns all links for the plate.
+
+## Get one link
+
+```text
+GET /{plateId}/links/{id}
+```
+
+Returns full link record including usage and metadata.
+
+## Update link
+
+```text
+POST /{plateId}/links/{id}/update
+```
+
+Supports partial updates.
+
+Example:
+
+```json
+{
+  "enabled": true,
+  "max_uses": 1000,
+  "expires_at": 0,
+  "metadata": {
+    "channel": "email"
+  }
+}
+```
+
+## Update metadata only
+
+```text
+POST /{plateId}/links/{id}/metadata
+```
+
+Example:
+
+```json
+{
+  "metadata": {
+    "owner": "growth",
+    "team": "acquisition"
+  }
+}
+```
+
+## Delete link
+
+```text
+DELETE /{plateId}/links/{id}
+```
+
+Removes link record and global ID mapping.

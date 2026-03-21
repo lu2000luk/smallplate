@@ -1,0 +1,233 @@
+---
+title: Link
+description: Link shortening and dynamic URL routing API for Smallplate
+---
+
+Plate-Link is a URL shortening and resolving service for Smallplate.
+
+It provides:
+
+- authenticated management APIs (`create`, `update`, `delete`, metadata)
+- public redirect API (`/url/{id}`)
+- public JSON resolve API (`/{plateId}/resolve/{id}`)
+
+## Base URL
+
+```text
+[base-url]/...
+```
+
+Plate management endpoints are scoped by `/{plateId}/...`.
+
+## Authentication
+
+Management endpoints require `Authorization` with your plate API key:
+
+```text
+Authorization: YOUR_API_KEY
+```
+
+Public endpoints do not require auth.
+
+## Response Format
+
+Success responses:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "any": "payload"
+  }
+}
+```
+
+Error responses:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_request",
+    "message": "human readable message"
+  }
+}
+```
+
+## Endpoint Groups
+
+| Group | Endpoints | Purpose |
+| --- | --- | --- |
+| Management | `POST /{plateId}/create`, `POST /{plateId}/create/dynamic`, `GET /{plateId}/links`, `GET /{plateId}/links/{id}`, `POST /{plateId}/links/{id}/update`, `POST /{plateId}/links/{id}/metadata`, `DELETE /{plateId}/links/{id}` | Create/manage short links |
+| Resolve JSON | `GET /{plateId}/resolve/{id}`, `GET /{plateId}/resolve/{id}/{tail...}` | Resolve destination with CORS |
+| Redirect | `GET /url/{id}`, `GET /url/{id}/{tail...}` | Redirect directly |
+
+## Language Examples
+
+- [Examples in JavaScript](/docs/link/examples-javascript/)
+- [Examples in Rust](/docs/link/examples-rust/)
+- [Examples in Go](/docs/link/examples-go/)
+
+## Link Creation
+
+### Create static link
+
+```text
+POST /{plateId}/create
+```
+
+Request:
+
+```json
+{
+  "destination": "https://example.com/product/123",
+  "expires_at": 0,
+  "max_uses": 0,
+  "id_prefix": "prod_",
+  "metadata": {
+    "campaign": "spring"
+  }
+}
+```
+
+### Create dynamic link
+
+```text
+POST /{plateId}/create/dynamic
+```
+
+Request:
+
+```json
+{
+  "template": "https://mycoolwebsite.com/product/{}?ref={}",
+  "id_prefix": "dyn_"
+}
+```
+
+## Dynamic Placeholder Behavior
+
+### Positional placeholders (`{}`)
+
+Template:
+
+```text
+https://mycoolwebsite.com/product/{}?ref={}
+```
+
+Request:
+
+```text
+GET /url/{id}/test/google
+```
+
+Resolved destination:
+
+```text
+https://mycoolwebsite.com/product/test?ref=google
+```
+
+### Named placeholders (`{name}`)
+
+Template:
+
+```text
+https://test.com/{product}
+```
+
+Request:
+
+```text
+GET /url/{id}?product=test
+```
+
+Resolved destination:
+
+```text
+https://test.com/test
+```
+
+## Update and Metadata
+
+### Update link fields
+
+```text
+POST /{plateId}/links/{id}/update
+```
+
+Request supports optional fields:
+
+- `destination`
+- `template`
+- `expires_at`
+- `max_uses`
+- `enabled`
+- `metadata`
+
+### Update metadata only
+
+```text
+POST /{plateId}/links/{id}/metadata
+```
+
+Request:
+
+```json
+{
+  "metadata": {
+    "owner": "growth-team",
+    "channel": "ads"
+  }
+}
+```
+
+## Resolve API (recommended for custom domains)
+
+Use resolve endpoint from your app/server, then redirect yourself.
+
+```text
+GET /{plateId}/resolve/{id}
+GET /{plateId}/resolve/{id}/{tail...}
+```
+
+Resolve response data includes:
+
+- `id`
+- `plate_id`
+- `destination`
+- `status`
+- `uses`
+
+## Redirect API
+
+```text
+GET /url/{id}
+GET /url/{id}/{tail...}
+```
+
+Returns an HTTP redirect to resolved destination.
+
+## ID Rules
+
+- Full custom IDs are not allowed.
+- Users may only provide `id_prefix`.
+- Random suffix uses `[a-zA-Z0-9]`.
+- Suffix starts at length `5`.
+- On collision: retry up to `10` times for that length.
+- Then increase length (`6`, then `7`, ...).
+
+## Quick cURL examples
+
+```bash
+# create static link
+curl -X POST "[base-url]/[plateId]/create" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"destination":"https://example.com","id_prefix":"go_"}'
+
+# resolve via JSON
+curl "[base-url]/[plateId]/resolve/[id]"
+
+# direct redirect
+curl -i "[base-url]/url/[id]"
+```

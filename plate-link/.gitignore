@@ -1,0 +1,5 @@
+.env
+*.exe
+temp/
+link
+dump.rdb

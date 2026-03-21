@@ -1,0 +1,72 @@
+---
+title: Examples in Go
+description: Go examples using Plate-Link resolve endpoint
+---
+
+## net/http
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+)
+
+const linkBase = "https://link.example.com"
+const plateID = "1"
+
+type resolveEnvelope struct {
+	Data struct {
+		Destination string `json:"destination"`
+	} `json:"data"`
+}
+
+func main() {
+	http.HandleFunc("/u/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/u/")
+		parts := strings.Split(path, "/")
+		if len(parts) == 0 || strings.TrimSpace(parts[0]) == "" {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+		id := parts[0]
+		tail := ""
+		if len(parts) > 1 {
+			tail = strings.Join(parts[1:], "/")
+		}
+
+		resolveURL := linkBase + "/" + plateID + "/resolve/" + id
+		if tail != "" {
+			resolveURL += "/" + tail
+		}
+		if r.URL.RawQuery != "" {
+			resolveURL += "?" + r.URL.RawQuery
+		}
+
+		resp, err := http.Get(resolveURL)
+		if err != nil {
+			http.Error(w, "resolve failed", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			http.Error(w, "link not found", resp.StatusCode)
+			return
+		}
+
+		var resolved resolveEnvelope
+		if err := json.NewDecoder(resp.Body).Decode(&resolved); err != nil || strings.TrimSpace(resolved.Data.Destination) == "" {
+			http.Error(w, "invalid resolve payload", http.StatusBadGateway)
+			return
+		}
+
+		http.Redirect(w, r, resolved.Data.Destination, http.StatusTemporaryRedirect)
+	})
+
+	_ = http.ListenAndServe(":8080", nil)
+}
+```
+
+This pattern is useful when you need application-side logic before redirecting (analytics, feature checks, A/B routing).

@@ -1,0 +1,99 @@
+---
+title: Resolve and Redirect
+description: Resolve short links to destination URLs
+---
+
+Plate-Link supports two resolution styles:
+
+- JSON resolve (recommended for custom domain routing)
+- direct redirect endpoint
+
+## JSON resolve endpoint
+
+```text
+GET /{plateId}/resolve/{id}
+GET /{plateId}/resolve/{id}/{tail...}
+```
+
+This endpoint has CORS enabled (`Access-Control-Allow-Origin: *`).
+
+Example response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "dyn_z8A1c",
+    "plate_id": "1",
+    "destination": "https://shop.example.com/product/test?ref=google",
+    "status": "ok",
+    "uses": 18
+  }
+}
+```
+
+## Redirect endpoint
+
+```text
+GET /url/{id}
+GET /url/{id}/{tail...}
+```
+
+Returns an HTTP redirect (temporary redirect).
+
+## Dynamic examples
+
+### Positional placeholders
+
+Template:
+
+```text
+https://mycoolwebsite.com/product/{}?ref={}
+```
+
+Request:
+
+```text
+GET /url/{id}/test/google
+```
+
+Destination:
+
+```text
+https://mycoolwebsite.com/product/test?ref=google
+```
+
+### Named placeholders
+
+Template:
+
+```text
+https://test.com/{product}
+```
+
+Request:
+
+```text
+GET /url/{id}?product=test
+```
+
+Destination:
+
+```text
+https://test.com/test
+```
+
+## Failure cases
+
+- `404 not_found` if ID does not exist
+- `410 disabled` if link disabled
+- `410 expired` if expired
+- `410 max_uses_reached` if usage limit reached
+
+## Framework examples
+
+For full code by language:
+
+- [Examples in JavaScript](/docs/link/examples-javascript/)
+- [Examples in Rust](/docs/link/examples-rust/)
+- [Examples in Go](/docs/link/examples-go/)

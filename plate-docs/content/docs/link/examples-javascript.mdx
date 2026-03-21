@@ -1,0 +1,124 @@
+---
+title: Examples in JavaScript
+description: JavaScript and TypeScript examples using the Plate-Link resolve endpoint
+---
+
+These examples resolve links with:
+
+```text
+GET /{plateId}/resolve/{id}
+```
+
+Then redirect from your own app/server.
+
+## Node.js (Express)
+
+```javascript
+import express from "express";
+
+const app = express();
+const LINK_BASE = process.env.PLATE_LINK_BASE || "https://link.example.com";
+const PLATE_ID = process.env.PLATE_ID || "1";
+
+app.get("/u/:id/*tail", async (req, res) => {
+  const id = req.params.id;
+  const rawTail = req.params.tail || "";
+  const tail = Array.isArray(rawTail) ? rawTail.join("/") : rawTail;
+  const query = new URLSearchParams(req.query).toString();
+
+  const resolveUrl = `${LINK_BASE}/${PLATE_ID}/resolve/${id}${tail ? `/${tail}` : ""}${query ? `?${query}` : ""}`;
+  const resolved = await fetch(resolveUrl, { headers: { Accept: "application/json" } });
+  if (!resolved.ok) {
+    return res.status(resolved.status).json({ error: "link_not_found" });
+  }
+
+  const body = await resolved.json();
+  const destination = body?.data?.destination;
+  if (!destination) {
+    return res.status(502).json({ error: "invalid_resolve_payload" });
+  }
+
+  return res.redirect(307, destination);
+});
+```
+
+## Next.js Route Handler
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+
+const LINK_BASE = process.env.PLATE_LINK_BASE || "https://link.example.com";
+const PLATE_ID = process.env.PLATE_ID || "1";
+
+export async function GET(req: NextRequest, ctx: { params: { parts: string[] } }) {
+  const parts = ctx.params.parts || [];
+  const [id, ...tail] = parts;
+  if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
+
+  const query = req.nextUrl.searchParams.toString();
+  const resolvePath = `/${PLATE_ID}/resolve/${id}${tail.length ? `/${tail.join("/")}` : ""}${query ? `?${query}` : ""}`;
+  const resolved = await fetch(`${LINK_BASE}${resolvePath}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!resolved.ok) {
+    return NextResponse.json({ error: "link_not_found" }, { status: resolved.status });
+  }
+
+  const body = await resolved.json();
+  return NextResponse.redirect(body.data.destination, { status: 307 });
+}
+```
+
+## Cloudflare Workers
+
+```javascript
+const LINK_BASE = "https://link.example.com";
+const PLATE_ID = "1";
+
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const parts = url.pathname.replace(/^\/+/, "").split("/");
+    if (parts[0] !== "u" || !parts[1]) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const id = parts[1];
+    const tail = parts.slice(2).join("/");
+    const resolveUrl = `${LINK_BASE}/${PLATE_ID}/resolve/${id}${tail ? `/${tail}` : ""}${url.search}`;
+    const resolved = await fetch(resolveUrl, { headers: { Accept: "application/json" } });
+
+    if (!resolved.ok) return new Response("Link not found", { status: resolved.status });
+    const body = await resolved.json();
+    return Response.redirect(body.data.destination, 307);
+  },
+};
+```
+
+## Nitro (H3)
+
+```typescript
+import { defineEventHandler, getRequestURL, sendRedirect } from "h3";
+
+const LINK_BASE = process.env.PLATE_LINK_BASE || "https://link.example.com";
+const PLATE_ID = process.env.PLATE_ID || "1";
+
+export default defineEventHandler(async (event) => {
+  const url = getRequestURL(event);
+  if (!url.pathname.startsWith("/u/")) return;
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  const id = parts[1];
+  const tail = parts.slice(2).join("/");
+  if (!id) return;
+
+  const resolveUrl = `${LINK_BASE}/${PLATE_ID}/resolve/${id}${tail ? `/${tail}` : ""}${url.search}`;
+  const resolved = await fetch(resolveUrl, { headers: { Accept: "application/json" } });
+  if (!resolved.ok) return new Response("Link not found", { status: resolved.status });
+
+  const body = await resolved.json();
+  return sendRedirect(event, body.data.destination, 307);
+});
+```

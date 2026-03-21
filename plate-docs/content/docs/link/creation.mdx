@@ -1,0 +1,83 @@
+---
+title: Creation API
+description: Create static and dynamic short links
+---
+
+Use creation endpoints to generate short links for a plate.
+
+## Create static link
+
+```text
+POST /{plateId}/create
+```
+
+Request body:
+
+```json
+{
+  "destination": "https://example.com/product/42",
+  "expires_at": 0,
+  "max_uses": 500,
+  "id_prefix": "prd_",
+  "metadata": {
+    "owner": "web-team"
+  }
+}
+```
+
+## Create dynamic link
+
+```text
+POST /{plateId}/create/dynamic
+```
+
+Request body:
+
+```json
+{
+  "template": "https://shop.example.com/product/{}?ref={}",
+  "id_prefix": "dyn_",
+  "expires_at": 0,
+  "max_uses": 0,
+  "metadata": {
+    "kind": "campaign"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `destination` | string | for static links | URL target |
+| `template` | string | for dynamic links | URL template with placeholders |
+| `expires_at` | number | optional | unix ms timestamp, `0` means no expiry |
+| `max_uses` | number | optional | `0` means unlimited |
+| `metadata` | object | optional | custom JSON payload |
+| `id_prefix` | string | optional | prefix for generated random ID |
+
+## ID behavior
+
+- You cannot provide a full custom ID.
+- Only `id_prefix` is accepted.
+- ID suffix is random alphanumeric and collision-safe.
+
+## Response shape
+
+```json
+{
+  "ok": true,
+  "data": {
+    "link": {
+      "id": "dyn_aB93x",
+      "plate_id": "1",
+      "dynamic_mode": "mixed",
+      "enabled": true,
+      "uses": 0,
+      "created_at": 1742500000000,
+      "updated_at": 1742500000000
+    },
+    "shortUrl": "/url/dyn_aB93x"
+  }
+}
+```
