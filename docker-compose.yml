@@ -4,7 +4,7 @@
 # 3) Stop: docker compose down
 # 4) Optional: set PLATE_DISABLE_WEB=1 to skip starting plate-web.
 # 5) Public URL overrides (optional):
-#    PLATE_MANAGER_PUBLIC_URL, PLATE_DB_PUBLIC_URL, PLATE_KV_PUBLIC_URL,
+#    PLATE_MANAGER_PUBLIC_URL, PLATE_DB_PUBLIC_URL, PLATE_KV_PUBLIC_URL, PLATE_VEC_PUBLIC_URL,
 #    PLATE_LINK_PUBLIC_URL, PLATE_DOCS_PUBLIC_URL, PLATE_WEB_PUBLIC_URL
 
 services:
@@ -104,6 +104,57 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+
+  vec-chroma:
+    image: chromadb/chroma
+    container_name: vec-chroma
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:8000/api/v2/heartbeat >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ./smallplate-data/chroma:/data
+    restart: unless-stopped
+
+  plate-vec:
+    build:
+      context: ./plate-vec
+      dockerfile: Dockerfile
+    container_name: plate-vec
+    depends_on:
+      plate-manager:
+        condition: service_healthy
+      vec-chroma:
+        condition: service_healthy
+    environment:
+      SERVICE_ID: "vec_main"
+      SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
+      MANAGER_URL: "plate-manager:3200"
+      PUBLIC_URL: "${PLATE_VEC_PUBLIC_URL:-localhost:3300}"
+      HTTP_ADDR: ":3300"
+      DATA_DIR: "/data"
+      CHROMA_URL: "http://vec-chroma:8000"
+    ports:
+      - "3300:3300"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3300/healthz >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ./smallplate-data/plate-vec:/data
     restart: unless-stopped
 
   link-redis:

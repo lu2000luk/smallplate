@@ -1,0 +1,43 @@
+---
+title: Collections
+description: Create, update, inspect, and delete collections
+---
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/:plate-id/databases/:database/collections` | List collections |
+| GET | `/:plate-id/databases/:database/collections/count` | Count collections |
+| POST | `/:plate-id/databases/:database/collections` | Create collection |
+| GET | `/:plate-id/databases/:database/collections/:collection` | Get collection |
+| PATCH | `/:plate-id/databases/:database/collections/:collection` | Patch collection metadata/settings |
+| DELETE | `/:plate-id/databases/:database/collections/:collection` | Delete collection |
+| POST | `/:plate-id/databases/:database/collections/:collection/peek` | Preview records |
+
+## Create collection request
+
+```json
+{
+  "name": "articles",
+  "get_or_create": false,
+  "metadata": { "domain": "docs" },
+  "dimension": 1536,
+  "distance_metric": "cosine",
+  "embedding_profile_id": "prof_default",
+  "index": {
+    "hnsw": {
+      "ef_construction": 200,
+      "ef_search": 50,
+      "max_neighbors": 32,
+      "resize_factor": 1.2,
+      "sync_threshold": 1000
+    }
+  }
+}
+```
+
+Notes:
+
+- `embedding_profile_id` is optional.
+- Collection creation never requires request-level embedding config.

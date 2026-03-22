@@ -1,0 +1,44 @@
+---
+title: Authentication
+description: Authenticate requests to Plate-Vec
+---
+
+All vec endpoints under `/:plate-id/...` require an API key in the `Authorization` header.
+
+## Header format
+
+```text
+Authorization: YOUR_API_KEY
+```
+
+For caller-billed embedding requests, send:
+
+```text
+X-Embedding-Api-Key: YOUR_PROVIDER_KEY
+```
+
+## Embedding provider constraints
+
+Plate-Vec supports only these providers and pinned endpoints:
+
+- OpenAI: `https://api.openai.com/v1/embeddings`
+- OpenRouter: `https://openrouter.ai/api/v1/embeddings`
+
+Custom embedding URLs are not supported.
+
+## Example request
+
+```bash
+curl -X POST "[base-url]/[plateID]" \
+  -H "Authorization: YOUR_API_KEY"
+```
+
+Embedding example:
+
+```bash
+curl -X POST "[base-url]/[plateID]/embeddings/run" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "X-Embedding-Api-Key: YOUR_PROVIDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"inputs":["hello world"],"provider":"openai","model":"text-embedding-3-small"}'
+```

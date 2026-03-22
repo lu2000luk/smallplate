@@ -1,0 +1,73 @@
+---
+title: Aliases and Search
+description: Default-database aliases, document shortcuts, and cross-collection search
+---
+
+## Default-database aliases
+
+These map to `database=default`:
+
+- `GET /:plate-id/collections`
+- `POST /:plate-id/collections`
+- `GET /:plate-id/collections/:collection`
+- `PATCH /:plate-id/collections/:collection`
+- `DELETE /:plate-id/collections/:collection`
+- `POST /:plate-id/collections/:collection/records/get`
+- `POST /:plate-id/collections/:collection/records/query`
+- `POST /:plate-id/collections/:collection/records/upsert`
+
+## Document shortcuts
+
+- `POST /:plate-id/collections/:collection/documents/upsert`
+- `POST /:plate-id/collections/:collection/documents/get`
+- `POST /:plate-id/collections/:collection/documents/search`
+- `POST /:plate-id/collections/:collection/documents/delete`
+
+Request shape examples:
+
+```json
+{
+  "documents": [
+    {
+      "id": "doc-1",
+      "text": "How API keys are validated",
+      "metadata": { "topic": "auth" }
+    }
+  ]
+}
+```
+
+```json
+{
+  "query": "how do api keys work?",
+  "n_results": 10,
+  "where": null,
+  "where_document": null
+}
+```
+
+`query` can be a string or a vector.
+
+## Cross-collection search
+
+```text
+POST /:plate-id/search
+```
+
+Request:
+
+```json
+{
+  "collections": ["articles", "faq"],
+  "query": "how do api keys work?",
+  "n_results": 10,
+  "where": null,
+  "embedding": null
+}
+```
+
+Behavior:
+
+- fans out against collections in default database
+- merges and sorts results deterministically
+- convenience route; collection-scoped query is more predictable for strict production behavior

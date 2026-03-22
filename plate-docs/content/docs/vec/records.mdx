@@ -1,0 +1,65 @@
+---
+title: Records and Query
+description: Add, upsert, fetch, query, and delete vector records
+---
+
+## Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/add` | Insert new records |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/update` | Update existing records |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/upsert` | Insert or update records |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/get` | Fetch records |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/query` | Similarity search |
+| POST | `/:plate-id/databases/:database/collections/:collection/records/delete` | Delete records |
+| GET | `/:plate-id/databases/:database/collections/:collection/records/count` | Count records |
+
+## Write request shape
+
+```json
+{
+  "records": [
+    {
+      "id": "doc-1",
+      "document": "Ada Lovelace wrote notes on the Analytical Engine.",
+      "embedding": null,
+      "metadata": { "topic": "history", "year": 1843 },
+      "uri": null
+    }
+  ],
+  "embedding": {
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "dimensions": 1536
+  }
+}
+```
+
+## Query request shape
+
+```json
+{
+  "query_texts": ["who worked on the analytical engine?"],
+  "query_embeddings": null,
+  "where": { "topic": "history" },
+  "where_document": { "$contains": "engine" },
+  "n_results": 10,
+  "include": ["documents", "metadatas", "distances"],
+  "embedding": {
+    "provider": "openrouter",
+    "model": "openai/text-embedding-3-small",
+    "dimensions": 1536
+  }
+}
+```
+
+## Embedding resolution
+
+For text write/query operations, vec resolves embeddings in this order:
+
+1. Request-level `embedding`
+2. Collection default embedding profile
+3. Plate default embedding profile
+4. Direct vectors (`records[].embedding`, `query_embeddings`)
+5. Fail with `embedding_not_configured`

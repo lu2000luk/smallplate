@@ -1,0 +1,44 @@
+---
+title: Errors and Validation
+description: Error codes and request validation behavior
+---
+
+Plate-Vec applies strict JSON decoding and rejects unknown fields.
+
+## Required error codes
+
+- `missing_plate_id`
+- `missing_authorization`
+- `invalid_authorization`
+- `invalid_json`
+- `invalid_request`
+- `not_found`
+- `conflict`
+- `embedding_not_configured`
+- `embedding_auth_missing`
+- `embedding_provider_unsupported`
+- `embedding_model_invalid`
+- `dimension_mismatch`
+- `invalid_filter`
+- `batch_too_large`
+- `backend_unavailable`
+- `internal_error`
+
+## Validation behavior
+
+- Unknown JSON fields are rejected.
+- Embedding configs containing `base_url`, `endpoint`, or custom provider endpoint fields are rejected.
+- If text write/query requests do not provide direct embeddings and no resolved embedding config exists, request fails with `embedding_not_configured`.
+- If provider auth is required but missing, request fails with `embedding_auth_missing`.
+
+## Error envelope example
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "embedding_not_configured",
+    "message": "embedding provider or direct embeddings required"
+  }
+}
+```

@@ -1,0 +1,50 @@
+---
+title: Vec
+description: Chroma-backed vector API for Smallplate
+---
+
+Plate-Vec is the Smallplate vector service. It exposes a plate-scoped HTTP API, validates requests with Smallplate auth, and proxies vector operations to internal Chroma.
+
+## Base URL
+
+```text
+[base-url]/[plate-id]/...
+```
+
+Every endpoint is scoped by `plateID`.
+
+## What this section covers
+
+- [Authentication](/docs/vec/authentication/)
+- [Core and Databases](/docs/vec/core/)
+- [Collections](/docs/vec/collections/)
+- [Records and Query](/docs/vec/records/)
+- [Embedding Profiles and Defaults](/docs/vec/embedding-profiles/)
+- [Aliases and Search Shortcuts](/docs/vec/aliases-search/)
+- [Import, Export, and Operations](/docs/vec/import-export/)
+- [Errors and Validation](/docs/vec/errors/)
+
+## Response format
+
+Success envelope:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "any": "payload"
+  }
+}
+```
+
+Error envelope:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_request",
+    "message": "human readable message"
+  }
+}
+```

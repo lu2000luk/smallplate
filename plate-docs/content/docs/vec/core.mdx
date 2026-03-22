@@ -1,0 +1,41 @@
+---
+title: Core and Databases
+description: Plate lifecycle and database management endpoints
+---
+
+## Core endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/:plate-id` | Ensure tenant and default database exist |
+| GET | `/:plate-id` | Plate summary |
+| GET | `/:plate-id/info` | Plate summary with counts and capabilities |
+| GET | `/:plate-id/limits` | Service limits summary |
+
+`POST /:plate-id` is idempotent.
+
+## Database endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/:plate-id/databases` | List databases |
+| POST | `/:plate-id/databases` | Create database |
+| GET | `/:plate-id/databases/:database` | Get database info |
+| DELETE | `/:plate-id/databases/:database` | Delete database |
+| POST | `/:plate-id/databases/:database/reset` | Remove all collections in DB |
+
+## Reset request
+
+```json
+{
+  "confirm": true
+}
+```
+
+## Create database request
+
+```json
+{
+  "name": "analytics"
+}
+```

@@ -1,0 +1,34 @@
+---
+title: Import and Export
+description: Export, import, clone, copy, reindex, and stats endpoints
+---
+
+## Export
+
+```text
+GET /:plate-id/export?database=default&format=jsonl
+GET /:plate-id/export?database=default&format=ndjson
+```
+
+Export payload includes:
+
+- database metadata
+- collection definitions
+- records with IDs, documents, metadata, and optional embeddings
+
+## Import
+
+```text
+POST /:plate-id/import
+```
+
+Import payload accepts database + collection + records structure for round-trip workflows.
+
+## Collection operations
+
+- `POST /:plate-id/databases/:database/collections/:collection/clone`
+- `POST /:plate-id/databases/:database/collections/:collection/copy`
+- `POST /:plate-id/databases/:database/collections/:collection/reindex`
+- `GET /:plate-id/databases/:database/collections/:collection/stats`
+
+These endpoints are for operational workflows around migration and maintenance.

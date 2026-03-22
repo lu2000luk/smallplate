@@ -1,0 +1,58 @@
+---
+title: Embedding Profiles
+description: Manage embedding profiles, defaults, and provider utilities
+---
+
+## Profile endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/plate-id/embedding-profiles` | List profiles |
+| POST | `/plate-id/embedding-profiles` | Create profile |
+| PATCH | `/plate-id/embedding-profiles/profile-id` | Update profile |
+| DELETE | `/plate-id/embedding-profiles/profile-id` | Delete profile |
+
+## Defaults endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/plate-id/embedding-defaults` | Read defaults |
+| PUT | `/plate-id/embedding-defaults` | Set defaults |
+
+## Utility and discovery
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/plate-id/embeddings/run` | Run embedding test without touching Chroma |
+| GET | `/plate-id/embedding-providers` | Supported providers |
+| GET | `/plate-id/embedding-models?provider=openai|openrouter` | Available models |
+
+## Profile shape
+
+```json
+{
+  "name": "default-openai-small",
+  "provider": "openai",
+  "model": "text-embedding-3-small",
+  "dimensions": 1536,
+  "api_key_mode": "stored"
+}
+```
+
+Rules:
+
+- `provider` must be `openai` or `openrouter`
+- custom endpoints are not supported
+- secrets are write-only and never returned
+- `api_key_mode`:
+  - `stored`: service stores encrypted secret
+  - `header`: caller must send `X-Embedding-Api-Key`
+
+## Defaults shape
+
+```json
+{
+  "default_profile_id": "prof_default",
+  "fallback_to_header_provider": false
+}
+```
