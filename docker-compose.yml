@@ -109,16 +109,6 @@ services:
   vec-chroma:
     image: chromadb/chroma
     container_name: vec-chroma
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget -qO- http://127.0.0.1:8000/api/v2/heartbeat >/dev/null || exit 1",
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     volumes:
       - ./smallplate-data/chroma:/data
     restart: unless-stopped
@@ -132,7 +122,7 @@ services:
       plate-manager:
         condition: service_healthy
       vec-chroma:
-        condition: service_healthy
+        condition: service_started
     environment:
       SERVICE_ID: "vec_main"
       SERVICE_KEY: "${SERVICE_KEY:-change-me-in-production}"
