@@ -383,7 +383,10 @@ async function testEndpoint(
 
     const time = Date.now() - startTime;
     const responseText = await readResponseBody(response);
-    const responseHeaders = Object.fromEntries(response.headers.entries());
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
     let responseBody = "";
     let parsedOk = true;
     let errorCode = "";
