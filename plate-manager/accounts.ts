@@ -157,7 +157,11 @@ function parseObjectRecord<T extends Record<string, unknown>>(
 
   try {
     const parsed = JSON.parse(value);
-    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed)
+    ) {
       return parsed as T;
     }
   } catch {
@@ -253,7 +257,10 @@ async function listUserPlatesRoute(req: Request): Promise<Response> {
   });
 }
 
-async function listPlateApiKeysRoute(req: Request, url: URL): Promise<Response> {
+async function listPlateApiKeysRoute(
+  req: Request,
+  url: URL,
+): Promise<Response> {
   const auth = requireLogin(req);
   if (!auth.ok) {
     return auth.response;
@@ -732,7 +739,7 @@ async function signup(req: Request): Promise<Response> {
     );
   }
 
-  log("Registered user", email);
+  log("Registered user", email, "IP:", ip);
 
   return jsonResponse(
     {
