@@ -50,7 +50,7 @@ func handleTableDetails(deps *plate.Dependencies) func(http.ResponseWriter, *htt
 			return err
 		}
 
-		columnsRows, err := db.QueryContext(r.Context(), "PRAGMA table_info("+quoteIdentifier(table)+")")
+		columnsRows, err := db.QueryContext(r.Context(), "PRAGMA table_info("+quotePragmaValue(table)+")")
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func handleTableDetails(deps *plate.Dependencies) func(http.ResponseWriter, *htt
 			return plate.NewAPIError(http.StatusNotFound, "not_found", "table not found")
 		}
 
-		fkRows, err := db.QueryContext(r.Context(), "PRAGMA foreign_key_list("+quoteIdentifier(table)+")")
+		fkRows, err := db.QueryContext(r.Context(), "PRAGMA foreign_key_list("+quotePragmaValue(table)+")")
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func handleTableIndexes(deps *plate.Dependencies) func(http.ResponseWriter, *htt
 			return err
 		}
 
-		rows, err := db.QueryContext(r.Context(), "PRAGMA index_list("+quoteIdentifier(table)+")")
+		rows, err := db.QueryContext(r.Context(), "PRAGMA index_list("+quotePragmaValue(table)+")")
 		if err != nil {
 			return err
 		}
@@ -209,6 +209,10 @@ func handleSchema(deps *plate.Dependencies) func(http.ResponseWriter, *http.Requ
 
 func quoteIdentifier(name string) string {
 	return `"` + stringsReplaceAll(name, `"`, `""`) + `"`
+}
+
+func quotePragmaValue(name string) string {
+	return `'` + stringsReplaceAll(name, `'`, `''`) + `'`
 }
 
 func stringsReplaceAll(value string, old string, new string) string {

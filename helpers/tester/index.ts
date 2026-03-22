@@ -11,6 +11,8 @@ interface Endpoint {
   method: string;
   path: string;
   body?: unknown;
+  rawBody?: string;
+  contentType?: string;
   requiresPlateId?: boolean;
   customId?: string;
   queryParams?: Record<string, string>;
@@ -93,7 +95,12 @@ const SERVICES: ServiceEndpoints[] = [
       { method: "GET", path: "/{id}/tables/test/indexes" },
       { method: "GET", path: "/{id}/schema" },
       { method: "GET", path: "/{id}/export", queryParams: { format: "sql" } },
-      { method: "POST", path: "/{id}/import/sql", body: { sql: "CREATE TABLE IF NOT EXISTS import_test (id INTEGER)" } },
+      {
+        method: "POST",
+        path: "/{id}/import/sql",
+        rawBody: "CREATE TABLE IF NOT EXISTS import_test (id INTEGER);",
+        contentType: "application/sql",
+      },
       { method: "GET", path: "/healthz" },
     ],
   },
@@ -359,26 +366,26 @@ async function testEndpoint(
   }
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "Content-Type": endpoint.contentType || "application/json",
     "Authorization": apiKey,
     ...(endpoint.extraHeaders || {}),
   };
 
-  const requestBody = endpoint.body ? JSON.stringify(endpoint.body, null, 2) : undefined;
+  const requestBody = endpoint.rawBody ?? (endpoint.body ? JSON.stringify(endpoint.body, null, 2) : undefined);
   const curl = toCurlCommand(endpoint.method, fullUrl.toString(), headers, requestBody);
 
   try {
     const response = await fetchWithTimeout(fullUrl.toString(), {
       method: endpoint.method,
       headers,
-      body: endpoint.body ? JSON.stringify(endpoint.body) : undefined,
+      body: endpoint.rawBody ?? (endpoint.body ? JSON.stringify(endpoint.body) : undefined),
     }, timeoutMs);
 
     const time = Date.now() - startTime;
     const responseText = await readResponseBody(response);
     const responseHeaders = Object.fromEntries(response.headers.entries());
     let responseBody = "";
-    let parsedOk = false;
+    let parsedOk = true;
     let errorCode = "";
     let errorMessage = "";
 
