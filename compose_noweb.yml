@@ -118,6 +118,7 @@ services:
       context: ./plate-vec
       dockerfile: Dockerfile
     container_name: plate-vec
+    user: "0:0"
     depends_on:
       plate-manager:
         condition: service_healthy
