@@ -12,6 +12,7 @@ Pub/Sub provides real-time message fan-out. Publishers send messages to a channe
 | POST | `/{plateId}/pubsub/{channel}/publish` | Publish a message |
 | GET | `/{plateId}/pubsub/{channel}/subscribe` | Subscribe with SSE |
 | GET | `/{plateId}/pubsub/{channel}/ws` | Subscribe with WebSocket |
+| GET | `/{plateId}/pubsub/{channel}/client` | Generate a temporary client WebSocket path |
 | POST | `/{plateId}/publish/{channel}` | Legacy publish alias |
 | GET | `/{plateId}/subscribe/{channel}` | Legacy SSE alias |
 | GET | `/{plateId}/ws/subscribe/{channel}` | Legacy WebSocket alias |
@@ -563,8 +564,132 @@ Pub/Sub provides real-time message fan-out. Publishers send messages to a channe
   </CodeBlockTab>
 </CodeBlockTabs>
 
+## Generate Client WebSocket Path
+
+Use this endpoint when you want to generate a temporary socket path for clients without exposing your API key.
+
+`GET /{plateId}/pubsub/{channel}/client`
+
+### Query Parameters
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `pattern` | boolean | `false` | Use pattern subscription mode (same behavior as SSE/WS subscribe routes) |
+| `max_dur` | integer (ms) | `0` | Max connection duration in milliseconds (`0` = unlimited) |
+| `expiry` or `ttl` | integer (ms) | `300000` | Max time allowed before the client connects (`0` to `600000`) |
+| `max_uses` | integer | `1` | Number of allowed successful WebSocket connections (`0` = unlimited) |
+
+The response returns a relative `path` value. Append it to your base URL (with `ws://` or `wss://`) to connect.
+
+<CodeBlockTabs defaultValue="javascript" groupId="pubsub-client-socket">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="javascript">JavaScript</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="go">Go</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="curl">cURL</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="javascript">
+    ```javascript
+    const plateId = "[id]";
+    const apiKey = "your-api-key";
+    const baseHttpUrl = "[base-url]";
+
+    const createResp = await fetch(
+      `${baseHttpUrl}/${plateId}/pubsub/alerts/client?max_dur=60000&expiry=300000&max_uses=1`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": apiKey
+        }
+      }
+    );
+
+    const createData = await createResp.json();
+    const wsBase = baseHttpUrl.replace(/^http/, "ws");
+    const ws = new WebSocket(`${wsBase}${createData.data.path}`);
+
+    ws.onmessage = (event) => {
+      console.log("Received:", JSON.parse(event.data));
+    };
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="go">
+    ```go
+    package main
+
+    import (
+     	"encoding/json"
+     	"fmt"
+     	"io"
+     	"log"
+     	"net/http"
+     	"strings"
+
+     	"github.com/gorilla/websocket"
+    )
+
+    type createSocketResponse struct {
+    	OK bool `json:"ok"`
+    	Data struct {
+    		Path string `json:"path"`
+    	} `json:"data"`
+    }
+
+    func main() {
+    	plateId := "[id]"
+    	apiKey := "your-api-key"
+    	baseURL := "[base-url]"
+
+    	url := fmt.Sprintf("%s/%s/pubsub/alerts/client?max_dur=60000&expiry=300000&max_uses=1", baseURL, plateId)
+    	req, _ := http.NewRequest("GET", url, nil)
+    	req.Header.Set("Authorization", apiKey)
+
+    	resp, err := (&http.Client{}).Do(req)
+    	if err != nil {
+    		log.Fatal(err)
+    	}
+    	defer resp.Body.Close()
+
+    	body, _ := io.ReadAll(resp.Body)
+    	var parsed createSocketResponse
+    	if err := json.Unmarshal(body, &parsed); err != nil {
+    		log.Fatal(err)
+    	}
+
+    	wsBase := strings.Replace(baseURL, "http", "ws", 1)
+    	wsURL := wsBase + parsed.Data.Path
+    	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+    	if err != nil {
+    		log.Fatal(err)
+    	}
+    	defer ws.Close()
+
+    	for {
+    		_, message, err := ws.ReadMessage()
+    		if err != nil {
+    			break
+    		}
+    		fmt.Println(string(message))
+    	}
+    }
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="curl">
+    ```bash
+    curl -X GET "[base-url]/[id]/pubsub/alerts/client?max_dur=60000&expiry=300000&max_uses=1" \
+      -H "Authorization: YOUR_API_KEY"
+
+    # Then connect using the returned `data.path`:
+    # websocat ws://[base-url][data.path]
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
 ## Notes
 
 - Published payloads are JSON-encoded.
 - Subscription payloads decode JSON when possible and fall back to plain strings.
+- Client socket connect route (`/{plateId}/s/{token}`) can return: `invalid_client_socket` (unknown token), `expired_client_socket` (token TTL elapsed), and `exhausted_client_socket` (max uses reached).
 - Legacy publish/subscribe routes are still supported.
